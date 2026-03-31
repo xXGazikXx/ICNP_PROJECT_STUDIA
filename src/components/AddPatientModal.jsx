@@ -19,6 +19,9 @@ const WOJEWODZTWA = [
 const STAN_CYWILNY = ['kawaler', 'panna', 'mężatka', 'mąż', 'wdowa', 'wdowiec'];
 const WYKSZTALCENIE = ['podstawowe', 'gimnazjalne', 'zasadnicze zawodowe', 'średnie', 'wyższe'];
 
+const KATEGORIE_PACJENTA = ['Kat I', 'Kat II', 'Kat III'];
+const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
+
 function AutocompleteInput({ value, onChange, options, placeholder, name }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -86,7 +89,16 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
         stan_cywilny: dd.stan_cywilny || '', wyksztalcenie: dd.wyksztalcenie || '',
         zawod_wykonywany: dd.zawod_wykonywany || '',
         opiekun_imie: dok.imie || '', opiekun_nazwisko: dok.nazwisko || '',
-        opiekun_telefon: dok.telefon || '',
+        opiekun_telefon: dok.telefon || '', opiekun_pokrewienstwo: dok.pokrewienstwo || '',
+        kategoria_pacjenta: editData.dane_dodatkowe?.kategoria_pacjenta || '',
+        oddzial: editData.dane_dodatkowe?.oddzial || '',
+        nr_sali: editData.dane_dodatkowe?.nr_sali || '',
+        data_przyjecia: editData.dane_dodatkowe?.data_przyjecia || '',
+        godz_przyjecia: editData.dane_dodatkowe?.godz_przyjecia || '',
+        tryb_przyjecia: editData.dane_dodatkowe?.tryb_przyjecia || '',
+        lekarz: editData.dane_dodatkowe?.lekarz || '',
+        lekarz_telefon: editData.dane_dodatkowe?.lekarz_telefon || '',
+        przyczyna_przyjecia: editData.dane_dodatkowe?.przyczyna_przyjecia || '',
       };
     }
     return {
@@ -95,7 +107,10 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
       miejsce_urodzenia: '', kraj_zamieszkania: '', wojewodztwo: '', powiat: '',
       miejscowosc: '', kod_pocztowy: '', ulica: '', nr_domu: '', nr_mieszkania: '',
       stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
-      opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '',
+      opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '', opiekun_pokrewienstwo: '',
+      kategoria_pacjenta: '', oddzial: '', nr_sali: '', data_przyjecia: '',
+      godz_przyjecia: '', tryb_przyjecia: '', lekarz: '', lekarz_telefon: '',
+      przyczyna_przyjecia: '',
     };
   };
 
@@ -193,11 +208,21 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
           stan_cywilny: form.stan_cywilny || null,
           wyksztalcenie: form.wyksztalcenie || null,
           zawod_wykonywany: form.zawod_wykonywany || null,
+          kategoria_pacjenta: form.kategoria_pacjenta || null,
+          oddzial: form.oddzial || null,
+          nr_sali: form.nr_sali || null,
+          data_przyjecia: form.data_przyjecia || null,
+          godz_przyjecia: form.godz_przyjecia || null,
+          tryb_przyjecia: form.tryb_przyjecia || null,
+          lekarz: form.lekarz || null,
+          lekarz_telefon: form.lekarz_telefon || null,
+          przyczyna_przyjecia: form.przyczyna_przyjecia || null,
         },
         dane_opiekuna: {
           imie: form.opiekun_imie || null,
           nazwisko: form.opiekun_nazwisko || null,
           telefon: form.opiekun_telefon || null,
+          pokrewienstwo: form.opiekun_pokrewienstwo || null,
         },
       };
 
@@ -333,7 +358,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
             </Field>
           </Row2>
 
-          <SectionTitle>Dane dodatkowe</SectionTitle>
+          <SectionTitle>Status Społeczny</SectionTitle>
 
           <Row3>
             <Field>
@@ -366,6 +391,61 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
               <input name="opiekun_telefon" value={form.opiekun_telefon} onChange={handleChange} />
             </Field>
           </Row3>
+
+          <Row2>
+            <Field>
+              <label>Stopień pokrewieństwa</label>
+              <input name="opiekun_pokrewienstwo" value={form.opiekun_pokrewienstwo} onChange={handleChange} placeholder="np. matka, ojciec, brat" />
+            </Field>
+          </Row2>
+
+          <SectionTitle>Dane oddziałowe</SectionTitle>
+
+          <Row3>
+            <Field>
+              <label>Kategoria pacjenta</label>
+              <AutocompleteInput name="kategoria_pacjenta" value={form.kategoria_pacjenta} onChange={handleChange} options={KATEGORIE_PACJENTA} placeholder="Wybierz kategorię..." />
+            </Field>
+            <Field>
+              <label>Oddział</label>
+              <input name="oddzial" value={form.oddzial} onChange={handleChange} placeholder="np. Chirurgii ogólnej" />
+            </Field>
+            <Field>
+              <label>Numer sali</label>
+              <input name="nr_sali" value={form.nr_sali} onChange={handleChange} inputMode="numeric" />
+            </Field>
+          </Row3>
+
+          <Row3>
+            <Field>
+              <label>Data przyjęcia</label>
+              <input name="data_przyjecia" value={form.data_przyjecia} onChange={handleChange} type="date" />
+            </Field>
+            <Field>
+              <label>Godzina przyjęcia</label>
+              <input name="godz_przyjecia" value={form.godz_przyjecia} onChange={handleChange} type="time" />
+            </Field>
+            <Field>
+              <label>Tryb przyjęcia</label>
+              <AutocompleteInput name="tryb_przyjecia" value={form.tryb_przyjecia} onChange={handleChange} options={TRYBY_PRZYJECIA} placeholder="Wybierz tryb..." />
+            </Field>
+          </Row3>
+
+          <Row2>
+            <Field>
+              <label>Lekarz prowadzący</label>
+              <input name="lekarz" value={form.lekarz} onChange={handleChange} />
+            </Field>
+            <Field>
+              <label>Telefon lekarza</label>
+              <input name="lekarz_telefon" value={form.lekarz_telefon} onChange={handleChange} />
+            </Field>
+          </Row2>
+
+          <Field>
+            <label>Przyczyna przyjęcia do szpitala</label>
+            <textarea name="przyczyna_przyjecia" value={form.przyczyna_przyjecia} onChange={handleChange} rows={3} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
+          </Field>
 
           <Buttons>
             <BtnCancel type="button" onClick={onClose}>Anuluj</BtnCancel>

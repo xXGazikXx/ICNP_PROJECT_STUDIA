@@ -6,6 +6,8 @@ import { useNotification } from '../components/Notification';
 import PatientList from '../components/PatientList';
 import AddPatientModal from '../components/AddPatientModal';
 import PatientSidebar from '../components/PatientSidebar';
+import Loader from '../components/Loader';
+import KartaWywiadu from '../components/KartaWywiadu';
 
 const TABS = [
   { key: 'aktualny', label: 'Pacjenci aktualni' },
@@ -114,7 +116,9 @@ export default function DashboardPage() {
         </Tabs>
 
         {loading ? (
-          <Loading>Ładowanie...</Loading>
+          <Loader />
+        ) : activeSection === 'wywiad' && selectedPatient ? (
+          <KartaWywiadu patient={selectedPatient} />
         ) : (
           <PatientList
             patients={patients}

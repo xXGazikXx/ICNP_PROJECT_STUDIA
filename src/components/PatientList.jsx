@@ -61,7 +61,6 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
           <th>Nazwisko</th>
           <th>PESEL</th>
           <th>Jednostka</th>
-          <th>Status</th>
           <th>Autor</th>
           <th>Akcje</th>
         </tr>
@@ -74,11 +73,6 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
             <td>{p.nazwisko}</td>
             <td>{p.pesel}</td>
             <td>{p.jednostka || '—'}</td>
-            <td>
-              <StatusBadge $color={STATUS_COLORS[p.status]}>
-                {STATUS_LABELS[p.status]}
-              </StatusBadge>
-            </td>
             <td>
               {p.autor ? `${p.autor.imie} ${p.autor.nazwisko}` : '—'}
             </td>
