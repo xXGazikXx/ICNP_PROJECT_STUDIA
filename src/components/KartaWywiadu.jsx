@@ -97,6 +97,9 @@ export default function KartaWywiadu({ patient }) {
   const notify = useNotification();
   const [data, setData] = useState(() => initData(patient));
   const [savingSection, setSavingSection] = useState(null);
+  const [saveModal, setSaveModal] = useState(null); // { sectionKey }
+  const [saveDate, setSaveDate] = useState('');
+  const [saveTime, setSaveTime] = useState('');
 
   useEffect(() => {
     setData(initData(patient));
@@ -147,12 +150,27 @@ export default function KartaWywiadu({ patient }) {
     });
   };
 
-  const handleSaveSection = async (sectionKey) => {
+  const openSaveModal = (sectionKey) => {
+    const now = new Date();
+    setSaveDate(now.toISOString().slice(0, 10));
+    setSaveTime(now.toTimeString().slice(0, 5));
+    setSaveModal({ sectionKey });
+  };
+
+  const handleConfirmSave = async () => {
+    if (!saveModal) return;
+    const { sectionKey } = saveModal;
     setSavingSection(sectionKey);
+    setSaveModal(null);
     try {
       const merged = { ...(patient.karta_wywiadu || {}), [sectionKey]: data[sectionKey] };
       await api.put(`/patients/${patient.id}`, { karta_wywiadu: merged });
-      notify(`Sekcja zapisana pomyślnie`, 'success');
+      await api.post('/wywiady', {
+        patient_id: patient.id,
+        content: { section: sectionKey, data: data[sectionKey] },
+        date: `${saveDate} ${saveTime}`,
+      });
+      notify('Sekcja zapisana pomyślnie', 'success');
     } catch (err) {
       console.error(err);
       notify('Błąd zapisu sekcji', 'error');
@@ -200,7 +218,7 @@ export default function KartaWywiadu({ patient }) {
                 <ToggleCheckbox checked={data.kontakt.brak_kontaktu} onChange={handleBrakKontaktu} label="Brak kontaktu" />
               </Field>
             </Row3>
-            <SaveSectionBtn onClick={() => handleSaveSection('kontakt')} disabled={savingSection === 'kontakt'}>
+            <SaveSectionBtn onClick={() => openSaveModal('kontakt')} disabled={savingSection === 'kontakt'}>
               {savingSection === 'kontakt' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -271,7 +289,7 @@ export default function KartaWywiadu({ patient }) {
               </tbody>
             </DataTable>
             <AddRowBtn onClick={() => addTableRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</AddRowBtn>
-            <SaveSectionBtn onClick={() => handleSaveSection('choroby')} disabled={savingSection === 'choroby'}>
+            <SaveSectionBtn onClick={() => openSaveModal('choroby')} disabled={savingSection === 'choroby'}>
               {savingSection === 'choroby' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -310,7 +328,7 @@ export default function KartaWywiadu({ patient }) {
                 <input type="number" min="0" value={data.parametry.obwod_klatki} onChange={(e) => update('parametry', 'obwod_klatki', e.target.value)} />
               </Field>
             </Row2>
-            <SaveSectionBtn onClick={() => handleSaveSection('parametry')} disabled={savingSection === 'parametry'}>
+            <SaveSectionBtn onClick={() => openSaveModal('parametry')} disabled={savingSection === 'parametry'}>
               {savingSection === 'parametry' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -353,7 +371,7 @@ export default function KartaWywiadu({ patient }) {
                 <ACInput value={data.oznaki_zycia.rodzaj_oddechu} onChange={(v) => update('oznaki_zycia', 'rodzaj_oddechu', v)} options={RODZAJE_ODDECHU} placeholder="Wpisz rodzaj..." />
               </Field>
             </Row3>
-            <SaveSectionBtn onClick={() => handleSaveSection('oznaki_zycia')} disabled={savingSection === 'oznaki_zycia'}>
+            <SaveSectionBtn onClick={() => openSaveModal('oznaki_zycia')} disabled={savingSection === 'oznaki_zycia'}>
               {savingSection === 'oznaki_zycia' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -399,7 +417,7 @@ export default function KartaWywiadu({ patient }) {
               </tbody>
             </DataTable>
             <AddRowBtn onClick={() => addTableRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</AddRowBtn>
-            <SaveSectionBtn onClick={() => handleSaveSection('ocena_bolu')} disabled={savingSection === 'ocena_bolu'}>
+            <SaveSectionBtn onClick={() => openSaveModal('ocena_bolu')} disabled={savingSection === 'ocena_bolu'}>
               {savingSection === 'ocena_bolu' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -441,7 +459,7 @@ export default function KartaWywiadu({ patient }) {
                 <textarea rows={2} value={data.krew.reakcje} onChange={(e) => update('krew', 'reakcje', e.target.value)} />
               </Field>
             )}
-            <SaveSectionBtn onClick={() => handleSaveSection('krew')} disabled={savingSection === 'krew'}>
+            <SaveSectionBtn onClick={() => openSaveModal('krew')} disabled={savingSection === 'krew'}>
               {savingSection === 'krew' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -479,7 +497,7 @@ export default function KartaWywiadu({ patient }) {
                 <AddRowBtn onClick={() => addTableRow('alergie', 'wpisy', { alergia: '', opis: '' })}>+ Dodaj</AddRowBtn>
               </>
             )}
-            <SaveSectionBtn onClick={() => handleSaveSection('alergie')} disabled={savingSection === 'alergie'}>
+            <SaveSectionBtn onClick={() => openSaveModal('alergie')} disabled={savingSection === 'alergie'}>
               {savingSection === 'alergie' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
@@ -550,12 +568,35 @@ export default function KartaWywiadu({ patient }) {
                 <textarea rows={2} value={data.styl_zycia.dieta} onChange={(e) => update('styl_zycia', 'dieta', e.target.value)} />
               </Field>
             </Row2>
-            <SaveSectionBtn onClick={() => handleSaveSection('styl_zycia')} disabled={savingSection === 'styl_zycia'}>
+            <SaveSectionBtn onClick={() => openSaveModal('styl_zycia')} disabled={savingSection === 'styl_zycia'}>
               {savingSection === 'styl_zycia' ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
+
+      {/* MODAL DATA + GODZINA */}
+      {saveModal && (
+        <ModalOverlay onClick={() => setSaveModal(null)}>
+          <ModalBox onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>Potwierdź zapis</ModalTitle>
+            <ModalField>
+              <label>Data</label>
+              <input type="date" value={saveDate} onChange={(e) => setSaveDate(e.target.value)} />
+            </ModalField>
+            <ModalField>
+              <label>Godzina</label>
+              <input type="time" value={saveTime} onChange={(e) => setSaveTime(e.target.value)} />
+            </ModalField>
+            <ModalButtons>
+              <ModalCancel type="button" onClick={() => setSaveModal(null)}>Anuluj</ModalCancel>
+              <ModalConfirm type="button" onClick={handleConfirmSave} disabled={!saveDate || !saveTime}>
+                Potwierdź i zapisz
+              </ModalConfirm>
+            </ModalButtons>
+          </ModalBox>
+        </ModalOverlay>
+      )}
     </Wrapper>
   );
 }
@@ -773,4 +814,88 @@ const ACOpt = styled.div`
   cursor: pointer;
   font-size: 0.88rem;
   &:hover { background: #f0f7fb; }
+`;
+
+/* ─── Modal styled components ─── */
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalBox = styled.div`
+  background: white;
+  border-radius: 14px;
+  padding: 28px 32px;
+  min-width: 360px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 1.15rem;
+  color: #1a1a2e;
+  margin: 0 0 20px;
+`;
+
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  input {
+    padding: 8px 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border 0.2s;
+    &:focus { outline: none; border-color: #2387B6; }
+  }
+`;
+
+const ModalButtons = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+`;
+
+const ModalCancel = styled.button`
+  padding: 9px 22px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: #f5f5f5; }
+`;
+
+const ModalConfirm = styled.button`
+  padding: 9px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #2387B6;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #1b6d94; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
