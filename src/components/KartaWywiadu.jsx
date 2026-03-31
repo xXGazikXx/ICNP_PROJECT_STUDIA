@@ -1,23 +1,43 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import ToggleCheckbox from './ToggleCheckbox';
 import api from '../api/axios';
 import { useNotification } from './Notification';
 
 const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-Stokesa', 'Kussmaula', 'Biota', 'inny'];
+const TYPY_KONTAKTU = ['słowny', 'pozasłowny', 'pisemny'];
+
+/* ─── Inline AutocompleteInput for KartaWywiadu ─── */
+function ACInput({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const filtered = options.filter((o) => o.toLowerCase().includes((value || '').toLowerCase()));
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <ACWrap ref={ref}>
+      <input value={value} onChange={(e) => { onChange(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} placeholder={placeholder} autoComplete="off" />
+      {open && filtered.length > 0 && (
+        <ACDrop>{filtered.slice(0, 6).map((o) => (
+          <ACOpt key={o} onMouseDown={() => { onChange(o); setOpen(false); }}>{o}</ACOpt>
+        ))}</ACDrop>
+      )}
+    </ACWrap>
+  );
+}
 
 const initData = (patient) => {
   const kw = patient?.karta_wywiadu || {};
   return {
     kontakt: {
       enabled: false,
-      typ: kw.kontakt?.typ || 'słowny',
+      typ: kw.kontakt?.typ || '',
       logiczny: kw.kontakt?.logiczny || false,
       zachowany: kw.kontakt?.zachowany || false,
       brak_kontaktu: kw.kontakt?.brak_kontaktu || false,
-      osoba_imie: kw.kontakt?.osoba_imie || patient?.dane_opiekuna?.imie || '',
-      osoba_nazwisko: kw.kontakt?.osoba_nazwisko || patient?.dane_opiekuna?.nazwisko || '',
-      osoba_telefon: kw.kontakt?.osoba_telefon || patient?.dane_opiekuna?.telefon || '',
     },
     choroby: {
       enabled: false,
@@ -56,6 +76,7 @@ const initData = (patient) => {
     },
     alergie: {
       enabled: false,
+      wystepuja: kw.alergie?.wystepuja || false,
       wpisy: kw.alergie?.wpisy || [{ alergia: '', opis: '' }],
     },
     styl_zycia: {
@@ -65,7 +86,7 @@ const initData = (patient) => {
       alkohol: kw.styl_zycia?.alkohol || false,
       alkohol_ile: kw.styl_zycia?.alkohol_ile || '',
       narkotyki: kw.styl_zycia?.narkotyki || false,
-      narkotyki_jakie: kw.styl_zycia?.narkotyki_jakie || '',
+      narkotyki_wpisy: kw.styl_zycia?.narkotyki_wpisy || [{ nazwa: '', czestotliwosc: '' }],
       aktywnosc: kw.styl_zycia?.aktywnosc || '',
       dieta: kw.styl_zycia?.dieta || '',
     },
@@ -75,7 +96,7 @@ const initData = (patient) => {
 export default function KartaWywiadu({ patient }) {
   const notify = useNotification();
   const [data, setData] = useState(() => initData(patient));
-  const [saving, setSaving] = useState(false);
+  const [savingSection, setSavingSection] = useState(null);
 
   useEffect(() => {
     setData(initData(patient));
@@ -126,16 +147,29 @@ export default function KartaWywiadu({ patient }) {
     });
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSaveSection = async (sectionKey) => {
+    setSavingSection(sectionKey);
     try {
-      await api.put(`/patients/${patient.id}`, { karta_wywiadu: data });
-      notify('Karta wywiadu została zapisana', 'success');
+      const merged = { ...(patient.karta_wywiadu || {}), [sectionKey]: data[sectionKey] };
+      await api.put(`/patients/${patient.id}`, { karta_wywiadu: merged });
+      notify(`Sekcja zapisana pomyślnie`, 'success');
     } catch (err) {
       console.error(err);
-      notify('Błąd zapisu karty wywiadu', 'error');
+      notify('Błąd zapisu sekcji', 'error');
     } finally {
-      setSaving(false);
+      setSavingSection(null);
+    }
+  };
+
+  // Brak kontaktu - reset other fields
+  const handleBrakKontaktu = () => {
+    if (!data.kontakt.brak_kontaktu) {
+      setData((prev) => ({
+        ...prev,
+        kontakt: { ...prev.kontakt, brak_kontaktu: true, logiczny: false, zachowany: false, typ: '' },
+      }));
+    } else {
+      update('kontakt', 'brak_kontaktu', false);
     }
   };
 
@@ -148,7 +182,7 @@ export default function KartaWywiadu({ patient }) {
       {/* KONTAKT Z PACJENTEM */}
       <Section>
         <SectionHeader onClick={() => toggleSection('kontakt')}>
-          <ToggleCheckbox checked={data.kontakt.enabled} onChange={() => toggleSection('kontakt')} />
+          <Chevron $open={data.kontakt.enabled}>▶</Chevron>
           <SectionName>Kontakt z pacjentem</SectionName>
         </SectionHeader>
         {data.kontakt.enabled && (
@@ -156,35 +190,19 @@ export default function KartaWywiadu({ patient }) {
             <Row3>
               <Field>
                 <label>Typ kontaktu</label>
-                <select value={data.kontakt.typ} onChange={(e) => update('kontakt', 'typ', e.target.value)}>
-                  <option>słowny</option>
-                  <option>pozasłowny</option>
-                  <option>pisemny</option>
-                </select>
+                <ACInput value={data.kontakt.typ} onChange={(v) => update('kontakt', 'typ', v)} options={TYPY_KONTAKTU} placeholder="Wpisz typ kontaktu..." />
               </Field>
               <Field style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
-                <ToggleCheckbox checked={data.kontakt.logiczny} onChange={() => update('kontakt', 'logiczny', !data.kontakt.logiczny)} label="Kontakt logiczny" />
-                <ToggleCheckbox checked={data.kontakt.zachowany} onChange={() => update('kontakt', 'zachowany', !data.kontakt.zachowany)} label="Kontakt zachowany" />
+                <ToggleCheckbox checked={data.kontakt.logiczny} onChange={() => !data.kontakt.brak_kontaktu && update('kontakt', 'logiczny', !data.kontakt.logiczny)} label="Kontakt logiczny" />
+                <ToggleCheckbox checked={data.kontakt.zachowany} onChange={() => !data.kontakt.brak_kontaktu && update('kontakt', 'zachowany', !data.kontakt.zachowany)} label="Kontakt zachowany" />
               </Field>
               <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
-                <ToggleCheckbox checked={data.kontakt.brak_kontaktu} onChange={() => update('kontakt', 'brak_kontaktu', !data.kontakt.brak_kontaktu)} label="Brak kontaktu" />
+                <ToggleCheckbox checked={data.kontakt.brak_kontaktu} onChange={handleBrakKontaktu} label="Brak kontaktu" />
               </Field>
             </Row3>
-            <SmallTitle>Osoba kontaktowa</SmallTitle>
-            <Row3>
-              <Field>
-                <label>Imię</label>
-                <input value={data.kontakt.osoba_imie} onChange={(e) => update('kontakt', 'osoba_imie', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Nazwisko</label>
-                <input value={data.kontakt.osoba_nazwisko} onChange={(e) => update('kontakt', 'osoba_nazwisko', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Telefon</label>
-                <input value={data.kontakt.osoba_telefon} onChange={(e) => update('kontakt', 'osoba_telefon', e.target.value)} />
-              </Field>
-            </Row3>
+            <SaveSectionBtn onClick={() => handleSaveSection('kontakt')} disabled={savingSection === 'kontakt'}>
+              {savingSection === 'kontakt' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -192,7 +210,7 @@ export default function KartaWywiadu({ patient }) {
       {/* CHOROBY */}
       <Section>
         <SectionHeader onClick={() => toggleSection('choroby')}>
-          <ToggleCheckbox checked={data.choroby.enabled} onChange={() => toggleSection('choroby')} />
+          <Chevron $open={data.choroby.enabled}>▶</Chevron>
           <SectionName>Choroby i zabiegi</SectionName>
         </SectionHeader>
         {data.choroby.enabled && (
@@ -253,6 +271,9 @@ export default function KartaWywiadu({ patient }) {
               </tbody>
             </DataTable>
             <AddRowBtn onClick={() => addTableRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</AddRowBtn>
+            <SaveSectionBtn onClick={() => handleSaveSection('choroby')} disabled={savingSection === 'choroby'}>
+              {savingSection === 'choroby' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -260,7 +281,7 @@ export default function KartaWywiadu({ patient }) {
       {/* PARAMETRY */}
       <Section>
         <SectionHeader onClick={() => toggleSection('parametry')}>
-          <ToggleCheckbox checked={data.parametry.enabled} onChange={() => toggleSection('parametry')} />
+          <Chevron $open={data.parametry.enabled}>▶</Chevron>
           <SectionName>Parametry</SectionName>
         </SectionHeader>
         {data.parametry.enabled && (
@@ -289,6 +310,9 @@ export default function KartaWywiadu({ patient }) {
                 <input type="number" min="0" value={data.parametry.obwod_klatki} onChange={(e) => update('parametry', 'obwod_klatki', e.target.value)} />
               </Field>
             </Row2>
+            <SaveSectionBtn onClick={() => handleSaveSection('parametry')} disabled={savingSection === 'parametry'}>
+              {savingSection === 'parametry' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -296,7 +320,7 @@ export default function KartaWywiadu({ patient }) {
       {/* OZNAKI ŻYCIA */}
       <Section>
         <SectionHeader onClick={() => toggleSection('oznaki_zycia')}>
-          <ToggleCheckbox checked={data.oznaki_zycia.enabled} onChange={() => toggleSection('oznaki_zycia')} />
+          <Chevron $open={data.oznaki_zycia.enabled}>▶</Chevron>
           <SectionName>Oznaki życia</SectionName>
         </SectionHeader>
         {data.oznaki_zycia.enabled && (
@@ -326,11 +350,12 @@ export default function KartaWywiadu({ patient }) {
               </Field>
               <Field>
                 <label>Rodzaj oddechu</label>
-                <select value={data.oznaki_zycia.rodzaj_oddechu} onChange={(e) => update('oznaki_zycia', 'rodzaj_oddechu', e.target.value)}>
-                  {RODZAJE_ODDECHU.map((r) => <option key={r}>{r}</option>)}
-                </select>
+                <ACInput value={data.oznaki_zycia.rodzaj_oddechu} onChange={(v) => update('oznaki_zycia', 'rodzaj_oddechu', v)} options={RODZAJE_ODDECHU} placeholder="Wpisz rodzaj..." />
               </Field>
             </Row3>
+            <SaveSectionBtn onClick={() => handleSaveSection('oznaki_zycia')} disabled={savingSection === 'oznaki_zycia'}>
+              {savingSection === 'oznaki_zycia' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -338,7 +363,7 @@ export default function KartaWywiadu({ patient }) {
       {/* OCENA BÓLU */}
       <Section>
         <SectionHeader onClick={() => toggleSection('ocena_bolu')}>
-          <ToggleCheckbox checked={data.ocena_bolu.enabled} onChange={() => toggleSection('ocena_bolu')} />
+          <Chevron $open={data.ocena_bolu.enabled}>▶</Chevron>
           <SectionName>Ocena bólu</SectionName>
         </SectionHeader>
         {data.ocena_bolu.enabled && (
@@ -374,6 +399,9 @@ export default function KartaWywiadu({ patient }) {
               </tbody>
             </DataTable>
             <AddRowBtn onClick={() => addTableRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</AddRowBtn>
+            <SaveSectionBtn onClick={() => handleSaveSection('ocena_bolu')} disabled={savingSection === 'ocena_bolu'}>
+              {savingSection === 'ocena_bolu' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -381,7 +409,7 @@ export default function KartaWywiadu({ patient }) {
       {/* KREW */}
       <Section>
         <SectionHeader onClick={() => toggleSection('krew')}>
-          <ToggleCheckbox checked={data.krew.enabled} onChange={() => toggleSection('krew')} />
+          <Chevron $open={data.krew.enabled}>▶</Chevron>
           <SectionName>Krew</SectionName>
         </SectionHeader>
         {data.krew.enabled && (
@@ -413,6 +441,9 @@ export default function KartaWywiadu({ patient }) {
                 <textarea rows={2} value={data.krew.reakcje} onChange={(e) => update('krew', 'reakcje', e.target.value)} />
               </Field>
             )}
+            <SaveSectionBtn onClick={() => handleSaveSection('krew')} disabled={savingSection === 'krew'}>
+              {savingSection === 'krew' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -420,26 +451,37 @@ export default function KartaWywiadu({ patient }) {
       {/* ALERGIE */}
       <Section>
         <SectionHeader onClick={() => toggleSection('alergie')}>
-          <ToggleCheckbox checked={data.alergie.enabled} onChange={() => toggleSection('alergie')} />
+          <Chevron $open={data.alergie.enabled}>▶</Chevron>
           <SectionName>Alergie</SectionName>
         </SectionHeader>
         {data.alergie.enabled && (
           <SectionBody>
-            <DataTable>
-              <thead>
-                <tr><th>Alergia</th><th>Opis reakcji</th><th></th></tr>
-              </thead>
-              <tbody>
-                {data.alergie.wpisy.map((row, i) => (
-                  <tr key={i}>
-                    <td><input value={row.alergia} onChange={(e) => updateTableRow('alergie', 'wpisy', i, 'alergia', e.target.value)} /></td>
-                    <td><input value={row.opis} onChange={(e) => updateTableRow('alergie', 'wpisy', i, 'opis', e.target.value)} /></td>
-                    <td><RemoveBtn onClick={() => removeTableRow('alergie', 'wpisy', i)}>×</RemoveBtn></td>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTable>
-            <AddRowBtn onClick={() => addTableRow('alergie', 'wpisy', { alergia: '', opis: '' })}>+ Dodaj</AddRowBtn>
+            <QuestionRow>
+              <span>Czy występują alergie?</span>
+              <ToggleCheckbox checked={data.alergie.wystepuja} onChange={() => update('alergie', 'wystepuja', !data.alergie.wystepuja)} label={data.alergie.wystepuja ? 'Tak' : 'Nie'} />
+            </QuestionRow>
+            {data.alergie.wystepuja && (
+              <>
+                <DataTable>
+                  <thead>
+                    <tr><th>Alergia</th><th>Opis reakcji</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {data.alergie.wpisy.map((row, i) => (
+                      <tr key={i}>
+                        <td><input value={row.alergia} onChange={(e) => updateTableRow('alergie', 'wpisy', i, 'alergia', e.target.value)} /></td>
+                        <td><input value={row.opis} onChange={(e) => updateTableRow('alergie', 'wpisy', i, 'opis', e.target.value)} /></td>
+                        <td><RemoveBtn onClick={() => removeTableRow('alergie', 'wpisy', i)}>×</RemoveBtn></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+                <AddRowBtn onClick={() => addTableRow('alergie', 'wpisy', { alergia: '', opis: '' })}>+ Dodaj</AddRowBtn>
+              </>
+            )}
+            <SaveSectionBtn onClick={() => handleSaveSection('alergie')} disabled={savingSection === 'alergie'}>
+              {savingSection === 'alergie' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
@@ -447,32 +489,58 @@ export default function KartaWywiadu({ patient }) {
       {/* STYL ŻYCIA */}
       <Section>
         <SectionHeader onClick={() => toggleSection('styl_zycia')}>
-          <ToggleCheckbox checked={data.styl_zycia.enabled} onChange={() => toggleSection('styl_zycia')} />
+          <Chevron $open={data.styl_zycia.enabled}>▶</Chevron>
           <SectionName>Styl życia</SectionName>
         </SectionHeader>
         {data.styl_zycia.enabled && (
           <SectionBody>
-            <Row3>
-              <Field>
-                <ToggleCheckbox checked={data.styl_zycia.palenie} onChange={() => update('styl_zycia', 'palenie', !data.styl_zycia.palenie)} label="Palenie tytoniu" />
-                {data.styl_zycia.palenie && (
-                  <input style={{ marginTop: 8 }} value={data.styl_zycia.palenie_ile} onChange={(e) => update('styl_zycia', 'palenie_ile', e.target.value)} placeholder="ile dziennie?" />
-                )}
+            <QuestionRow>
+              <span>Palenie tytoniu</span>
+              <ToggleCheckbox checked={data.styl_zycia.palenie} onChange={() => update('styl_zycia', 'palenie', !data.styl_zycia.palenie)} label={data.styl_zycia.palenie ? 'Tak' : 'Nie'} />
+            </QuestionRow>
+            {data.styl_zycia.palenie && (
+              <Field style={{ marginBottom: 12 }}>
+                <label>Ile dziennie?</label>
+                <input value={data.styl_zycia.palenie_ile} onChange={(e) => update('styl_zycia', 'palenie_ile', e.target.value)} placeholder="np. 10 sztuk" />
               </Field>
-              <Field>
-                <ToggleCheckbox checked={data.styl_zycia.alkohol} onChange={() => update('styl_zycia', 'alkohol', !data.styl_zycia.alkohol)} label="Alkohol" />
-                {data.styl_zycia.alkohol && (
-                  <input style={{ marginTop: 8 }} value={data.styl_zycia.alkohol_ile} onChange={(e) => update('styl_zycia', 'alkohol_ile', e.target.value)} placeholder="ile / jak często?" />
-                )}
+            )}
+
+            <QuestionRow>
+              <span>Alkohol</span>
+              <ToggleCheckbox checked={data.styl_zycia.alkohol} onChange={() => update('styl_zycia', 'alkohol', !data.styl_zycia.alkohol)} label={data.styl_zycia.alkohol ? 'Tak' : 'Nie'} />
+            </QuestionRow>
+            {data.styl_zycia.alkohol && (
+              <Field style={{ marginBottom: 12 }}>
+                <label>Ile / jak często?</label>
+                <input value={data.styl_zycia.alkohol_ile} onChange={(e) => update('styl_zycia', 'alkohol_ile', e.target.value)} placeholder="np. okazjonalnie" />
               </Field>
-              <Field>
-                <ToggleCheckbox checked={data.styl_zycia.narkotyki} onChange={() => update('styl_zycia', 'narkotyki', !data.styl_zycia.narkotyki)} label="Narkotyki" />
-                {data.styl_zycia.narkotyki && (
-                  <input style={{ marginTop: 8 }} value={data.styl_zycia.narkotyki_jakie} onChange={(e) => update('styl_zycia', 'narkotyki_jakie', e.target.value)} placeholder="jakie?" />
-                )}
-              </Field>
-            </Row3>
-            <Row2>
+            )}
+
+            <QuestionRow>
+              <span>Narkotyki</span>
+              <ToggleCheckbox checked={data.styl_zycia.narkotyki} onChange={() => update('styl_zycia', 'narkotyki', !data.styl_zycia.narkotyki)} label={data.styl_zycia.narkotyki ? 'Tak' : 'Nie'} />
+            </QuestionRow>
+            {data.styl_zycia.narkotyki && (
+              <>
+                <DataTable>
+                  <thead>
+                    <tr><th>Nazwa substancji</th><th>Częstotliwość</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {data.styl_zycia.narkotyki_wpisy.map((row, i) => (
+                      <tr key={i}>
+                        <td><input value={row.nazwa} onChange={(e) => updateTableRow('styl_zycia', 'narkotyki_wpisy', i, 'nazwa', e.target.value)} /></td>
+                        <td><input value={row.czestotliwosc} onChange={(e) => updateTableRow('styl_zycia', 'narkotyki_wpisy', i, 'czestotliwosc', e.target.value)} /></td>
+                        <td><RemoveBtn onClick={() => removeTableRow('styl_zycia', 'narkotyki_wpisy', i)}>×</RemoveBtn></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+                <AddRowBtn onClick={() => addTableRow('styl_zycia', 'narkotyki_wpisy', { nazwa: '', czestotliwosc: '' })}>+ Dodaj</AddRowBtn>
+              </>
+            )}
+
+            <Row2 style={{ marginTop: 16 }}>
               <Field>
                 <label>Aktywność fizyczna</label>
                 <textarea rows={2} value={data.styl_zycia.aktywnosc} onChange={(e) => update('styl_zycia', 'aktywnosc', e.target.value)} />
@@ -482,15 +550,12 @@ export default function KartaWywiadu({ patient }) {
                 <textarea rows={2} value={data.styl_zycia.dieta} onChange={(e) => update('styl_zycia', 'dieta', e.target.value)} />
               </Field>
             </Row2>
+            <SaveSectionBtn onClick={() => handleSaveSection('styl_zycia')} disabled={savingSection === 'styl_zycia'}>
+              {savingSection === 'styl_zycia' ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </SaveSectionBtn>
           </SectionBody>
         )}
       </Section>
-
-      <SaveBar>
-        <SaveBtn onClick={handleSave} disabled={saving}>
-          {saving ? 'Zapisywanie...' : 'Zapisz kartę wywiadu'}
-        </SaveBtn>
-      </SaveBar>
     </Wrapper>
   );
 }
@@ -523,7 +588,16 @@ const SectionHeader = styled.div`
   padding: 14px 20px;
   cursor: pointer;
   transition: background 0.2s;
+  user-select: none;
   &:hover { background: #f8f9fa; }
+`;
+
+const Chevron = styled.span`
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #888;
+  transition: transform 0.25s;
+  transform: rotate(${(p) => (p.$open ? '90deg' : '0deg')});
 `;
 
 const SectionName = styled.span`
@@ -544,6 +618,18 @@ const SmallTitle = styled.h4`
   margin: 16px 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+`;
+
+const QuestionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  span {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #333;
+  }
 `;
 
 const Row3 = styled.div`
@@ -639,22 +725,52 @@ const AddRowBtn = styled.button`
   &:hover { background: #f0f7fb; }
 `;
 
-const SaveBar = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  padding: 1.5rem 0;
-`;
-
-const SaveBtn = styled.button`
+const SaveSectionBtn = styled.button`
   background: #2387B6;
   color: white;
   border: none;
-  padding: 12px 32px;
-  border-radius: 10px;
-  font-size: 1rem;
+  padding: 10px 28px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  margin-top: 16px;
   transition: all 0.2s;
   &:hover { background: #1b6d94; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const ACWrap = styled.div`
+  position: relative;
+  input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border 0.2s;
+    &:focus { outline: none; border-color: #2387B6; }
+  }
+`;
+
+const ACDrop = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+`;
+
+const ACOpt = styled.div`
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  &:hover { background: #f0f7fb; }
 `;

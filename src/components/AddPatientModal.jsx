@@ -95,6 +95,9 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
         zawod_wykonywany: dd.zawod_wykonywany || '',
         opiekun_imie: dok.imie || '', opiekun_nazwisko: dok.nazwisko || '',
         opiekun_telefon: dok.telefon || '', opiekun_pokrewienstwo: dok.pokrewienstwo || '',
+        kontakt_imie: editData.dane_dodatkowe?.kontakt_imie || '',
+        kontakt_nazwisko: editData.dane_dodatkowe?.kontakt_nazwisko || '',
+        kontakt_telefon: editData.dane_dodatkowe?.kontakt_telefon || '',
         kategoria_pacjenta: editData.dane_dodatkowe?.kategoria_pacjenta || '',
         oddzial: editData.dane_dodatkowe?.oddzial || jednostka || '',
         nr_sali: editData.dane_dodatkowe?.nr_sali || '',
@@ -114,6 +117,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
       miejscowosc: '', kod_pocztowy: '', ulica: '', nr_domu: '', nr_mieszkania: '',
       stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
       opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '', opiekun_pokrewienstwo: '',
+      kontakt_imie: '', kontakt_nazwisko: '', kontakt_telefon: '',
       kategoria_pacjenta: '', oddzial: jednostka || '', nr_sali: '', data_przyjecia: todayStr,
       godz_przyjecia: '', tryb_przyjecia: '', lekarz: '', lekarz_telefon: '',
       przyczyna_przyjecia: '',
@@ -235,6 +239,9 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
           lekarz: form.lekarz || null,
           lekarz_telefon: form.lekarz_telefon || null,
           przyczyna_przyjecia: form.przyczyna_przyjecia || null,
+          kontakt_imie: form.kontakt_imie || null,
+          kontakt_nazwisko: form.kontakt_nazwisko || null,
+          kontakt_telefon: form.kontakt_telefon || null,
         },
         dane_opiekuna: {
           imie: form.opiekun_imie || null,
@@ -425,6 +432,23 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
               <input name="opiekun_pokrewienstwo" value={form.opiekun_pokrewienstwo} onChange={handleChange} placeholder="np. matka, ojciec, brat" />
             </Field>
           </Row2>
+
+          <SectionTitle>Osoba kontaktowa</SectionTitle>
+
+          <Row3>
+            <Field>
+              <label>Imię</label>
+              <input name="kontakt_imie" value={form.kontakt_imie} onChange={handleChange} />
+            </Field>
+            <Field>
+              <label>Nazwisko</label>
+              <input name="kontakt_nazwisko" value={form.kontakt_nazwisko} onChange={handleChange} />
+            </Field>
+            <Field>
+              <label>Telefon</label>
+              <input name="kontakt_telefon" value={form.kontakt_telefon} onChange={handleChange} />
+            </Field>
+          </Row3>
 
           <SectionTitle>Dane oddziałowe</SectionTitle>
 
