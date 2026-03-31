@@ -9,22 +9,6 @@ const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-St
 const initData = (patient) => {
   const kw = patient?.karta_wywiadu || {};
   return {
-    dane_oddzialowe: {
-      enabled: true,
-      kategoria_pacjenta: kw.dane_oddzialowe?.kategoria_pacjenta || patient?.dane_dodatkowe?.kategoria_pacjenta || '',
-      oddzial: kw.dane_oddzialowe?.oddzial || patient?.dane_dodatkowe?.oddzial || patient?.jednostka || '',
-      nr_sali: kw.dane_oddzialowe?.nr_sali || patient?.dane_dodatkowe?.nr_sali || '',
-      data_przyjecia: kw.dane_oddzialowe?.data_przyjecia || patient?.dane_dodatkowe?.data_przyjecia || '',
-      godz_przyjecia: kw.dane_oddzialowe?.godz_przyjecia || patient?.dane_dodatkowe?.godz_przyjecia || '',
-      tryb_przyjecia: kw.dane_oddzialowe?.tryb_przyjecia || patient?.dane_dodatkowe?.tryb_przyjecia || '',
-      przeniesienie: kw.dane_oddzialowe?.przeniesienie || '',
-      leczenie_jednodniowe: kw.dane_oddzialowe?.leczenie_jednodniowe || false,
-      pobyt_szpital_dni: kw.dane_oddzialowe?.pobyt_szpital_dni || '',
-      zakazenie: kw.dane_oddzialowe?.zakazenie || false,
-      lekarz: kw.dane_oddzialowe?.lekarz || patient?.dane_dodatkowe?.lekarz || '',
-      lekarz_telefon: kw.dane_oddzialowe?.lekarz_telefon || patient?.dane_dodatkowe?.lekarz_telefon || '',
-      przyczyna_przyjecia: kw.dane_oddzialowe?.przyczyna_przyjecia || patient?.dane_dodatkowe?.przyczyna_przyjecia || '',
-    },
     kontakt: {
       enabled: false,
       typ: kw.kontakt?.typ || 'słowny',
@@ -160,85 +144,6 @@ export default function KartaWywiadu({ patient }) {
   return (
     <Wrapper>
       <Title>Karta wywiadu — {patient.imie} {patient.nazwisko}</Title>
-
-      {/* DANE ODDZIAŁOWE */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('dane_oddzialowe')}>
-          <ToggleCheckbox checked={data.dane_oddzialowe.enabled} onChange={() => toggleSection('dane_oddzialowe')} />
-          <SectionName>Dane oddziałowe</SectionName>
-        </SectionHeader>
-        {data.dane_oddzialowe.enabled && (
-          <SectionBody>
-            <Row3>
-              <Field>
-                <label>Kategoria pacjenta</label>
-                <select value={data.dane_oddzialowe.kategoria_pacjenta} onChange={(e) => update('dane_oddzialowe', 'kategoria_pacjenta', e.target.value)}>
-                  <option value="">— wybierz —</option>
-                  <option>Kat I</option>
-                  <option>Kat II</option>
-                  <option>Kat III</option>
-                </select>
-              </Field>
-              <Field>
-                <label>Oddział</label>
-                <input value={data.dane_oddzialowe.oddzial} onChange={(e) => update('dane_oddzialowe', 'oddzial', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Numer sali</label>
-                <input value={data.dane_oddzialowe.nr_sali} onChange={(e) => update('dane_oddzialowe', 'nr_sali', e.target.value)} />
-              </Field>
-            </Row3>
-            <Row3>
-              <Field>
-                <label>Data przyjęcia</label>
-                <input type="date" value={data.dane_oddzialowe.data_przyjecia} onChange={(e) => update('dane_oddzialowe', 'data_przyjecia', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Godzina przyjęcia</label>
-                <input type="time" value={data.dane_oddzialowe.godz_przyjecia} onChange={(e) => update('dane_oddzialowe', 'godz_przyjecia', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Tryb przyjęcia</label>
-                <select value={data.dane_oddzialowe.tryb_przyjecia} onChange={(e) => update('dane_oddzialowe', 'tryb_przyjecia', e.target.value)}>
-                  <option value="">— wybierz —</option>
-                  <option>nagły</option>
-                  <option>planowany</option>
-                </select>
-              </Field>
-            </Row3>
-            <Row3>
-              <Field>
-                <label>Przeniesienie z oddziału</label>
-                <input value={data.dane_oddzialowe.przeniesienie} onChange={(e) => update('dane_oddzialowe', 'przeniesienie', e.target.value)} placeholder="jeśli dotyczy" />
-              </Field>
-              <Field>
-                <label>Liczba dni w szpitalu</label>
-                <input type="number" min="0" value={data.dane_oddzialowe.pobyt_szpital_dni} onChange={(e) => update('dane_oddzialowe', 'pobyt_szpital_dni', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Lekarz prowadzący</label>
-                <input value={data.dane_oddzialowe.lekarz} onChange={(e) => update('dane_oddzialowe', 'lekarz', e.target.value)} />
-              </Field>
-            </Row3>
-            <Row3>
-              <Field>
-                <label>Telefon lekarza</label>
-                <input value={data.dane_oddzialowe.lekarz_telefon} onChange={(e) => update('dane_oddzialowe', 'lekarz_telefon', e.target.value)} />
-              </Field>
-              <Field style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 22 }}>
-                <ToggleCheckbox checked={data.dane_oddzialowe.leczenie_jednodniowe} onChange={() => update('dane_oddzialowe', 'leczenie_jednodniowe', !data.dane_oddzialowe.leczenie_jednodniowe)} label="Leczenie jednodniowe" />
-              </Field>
-              <Field style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 22 }}>
-                <ToggleCheckbox checked={data.dane_oddzialowe.zakazenie} onChange={() => update('dane_oddzialowe', 'zakazenie', !data.dane_oddzialowe.zakazenie)} label="Zakażenie szpitalne" />
-              </Field>
-            </Row3>
-            <Field>
-              <label>Przyczyna przyjęcia do szpitala</label>
-              <textarea rows={3} value={data.dane_oddzialowe.przyczyna_przyjecia} onChange={(e) => update('dane_oddzialowe', 'przyczyna_przyjecia', e.target.value)} />
-            </Field>
-          </SectionBody>
-        )}
-      </Section>
 
       {/* KONTAKT Z PACJENTEM */}
       <Section>

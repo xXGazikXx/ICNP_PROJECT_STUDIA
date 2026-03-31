@@ -19,6 +19,7 @@ const WOJEWODZTWA = [
 const STAN_CYWILNY = ['kawaler', 'panna', 'mężatka', 'mąż', 'wdowa', 'wdowiec'];
 const WYKSZTALCENIE = ['podstawowe', 'gimnazjalne', 'zasadnicze zawodowe', 'średnie', 'wyższe'];
 
+const TYPY_DOKUMENTU = ['PESEL', 'Paszport', 'Inny dokument'];
 const KATEGORIE_PACJENTA = ['Kat I', 'Kat II', 'Kat III'];
 const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
 
@@ -66,6 +67,9 @@ function AutocompleteInput({ value, onChange, options, placeholder, name }) {
 
 export default function AddPatientModal({ onClose, onAdded, editData, jednostka }) {
   const isEdit = !!editData;
+  const formRef = useRef(null);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const initForm = () => {
     if (editData) {
@@ -74,6 +78,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
       const dd = editData.dane_dodatkowe || {};
       const dok = editData.dane_opiekuna || {};
       return {
+        typ_dokumentu: editData.typ_dokumentu || 'PESEL',
         imie: editData.imie || '', nazwisko: editData.nazwisko || '',
         pesel: editData.pesel || '', plec: editData.plec || '',
         data_urodzenia: editData.data_urodzenia || '',
@@ -91,9 +96,9 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
         opiekun_imie: dok.imie || '', opiekun_nazwisko: dok.nazwisko || '',
         opiekun_telefon: dok.telefon || '', opiekun_pokrewienstwo: dok.pokrewienstwo || '',
         kategoria_pacjenta: editData.dane_dodatkowe?.kategoria_pacjenta || '',
-        oddzial: editData.dane_dodatkowe?.oddzial || '',
+        oddzial: editData.dane_dodatkowe?.oddzial || jednostka || '',
         nr_sali: editData.dane_dodatkowe?.nr_sali || '',
-        data_przyjecia: editData.dane_dodatkowe?.data_przyjecia || '',
+        data_przyjecia: editData.dane_dodatkowe?.data_przyjecia || todayStr,
         godz_przyjecia: editData.dane_dodatkowe?.godz_przyjecia || '',
         tryb_przyjecia: editData.dane_dodatkowe?.tryb_przyjecia || '',
         lekarz: editData.dane_dodatkowe?.lekarz || '',
@@ -102,13 +107,14 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
       };
     }
     return {
+      typ_dokumentu: 'PESEL',
       imie: '', nazwisko: '', pesel: '', plec: '', data_urodzenia: '', wiek: '',
       numer_ksiegi_glownej: '', nazwisko_panienskie: '', kraj_urodzenia: '',
       miejsce_urodzenia: '', kraj_zamieszkania: '', wojewodztwo: '', powiat: '',
       miejscowosc: '', kod_pocztowy: '', ulica: '', nr_domu: '', nr_mieszkania: '',
       stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
       opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '', opiekun_pokrewienstwo: '',
-      kategoria_pacjenta: '', oddzial: '', nr_sali: '', data_przyjecia: '',
+      kategoria_pacjenta: '', oddzial: jednostka || '', nr_sali: '', data_przyjecia: todayStr,
       godz_przyjecia: '', tryb_przyjecia: '', lekarz: '', lekarz_telefon: '',
       przyczyna_przyjecia: '',
     };
@@ -118,10 +124,21 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      const inputs = Array.from(formRef.current.querySelectorAll('input, select, textarea'));
+      const idx = inputs.indexOf(e.target);
+      if (idx >= 0 && idx < inputs.length - 1) {
+        inputs[idx + 1].focus();
+      }
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === 'pesel') {
+    if (name === 'pesel' && form.typ_dokumentu === 'PESEL') {
       const digits = value.replace(/\D/g, '').slice(0, 11);
       setForm((prev) => {
         const next = { ...prev, pesel: digits };
@@ -181,6 +198,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
 
     try {
       const payload = {
+        typ_dokumentu: form.typ_dokumentu,
         imie: form.imie,
         nazwisko: form.nazwisko,
         pesel: form.pesel,
@@ -251,7 +269,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
 
         {error && <Error>{error}</Error>}
 
-        <Form onSubmit={handleSubmit}>
+        <Form ref={formRef} onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
           <SectionTitle>Dane personalne</SectionTitle>
 
           <Row3>
@@ -287,20 +305,26 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
 
           <Row3>
             <Field>
-              <label>PESEL *</label>
-              <input name="pesel" value={form.pesel} onChange={handleChange} inputMode="numeric" maxLength={11} placeholder="00000000000" required />
+              <label>Typ dokumentu</label>
+              <select name="typ_dokumentu" value={form.typ_dokumentu} onChange={handleChange}>
+                {TYPY_DOKUMENTU.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field>
+              <label>{form.typ_dokumentu === 'PESEL' ? 'PESEL *' : form.typ_dokumentu === 'Paszport' ? 'Nr paszportu *' : 'Nr dokumentu *'}</label>
+              <input name="pesel" value={form.pesel} onChange={handleChange} inputMode={form.typ_dokumentu === 'PESEL' ? 'numeric' : 'text'} maxLength={form.typ_dokumentu === 'PESEL' ? 11 : 30} placeholder={form.typ_dokumentu === 'PESEL' ? '00000000000' : 'Wpisz numer...'} required />
             </Field>
             <Field>
               <label>Data urodzenia</label>
               <input name="data_urodzenia" value={form.data_urodzenia} onChange={handleChange} type="date" />
             </Field>
+          </Row3>
+
+          <Row3>
             <Field>
               <label>Wiek</label>
               <input name="wiek" value={form.wiek} readOnly style={{ background: '#f5f5f5' }} />
             </Field>
-          </Row3>
-
-          <Row3>
             <Field>
               <label>Numer księgi głównej</label>
               <input name="numer_ksiegi_glownej" value={form.numer_ksiegi_glownej} onChange={handleChange} />
@@ -309,11 +333,14 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
               <label>Kraj urodzenia</label>
               <AutocompleteInput name="kraj_urodzenia" value={form.kraj_urodzenia} onChange={handleChange} options={KRAJE} placeholder="Wpisz kraj..." />
             </Field>
+          </Row3>
+
+          <Row>
             <Field>
               <label>Miejsce urodzenia</label>
               <input name="miejsce_urodzenia" value={form.miejsce_urodzenia} onChange={handleChange} />
             </Field>
-          </Row3>
+          </Row>
 
           <SectionTitle>Adres zamieszkania</SectionTitle>
 
