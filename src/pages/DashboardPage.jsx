@@ -66,7 +66,7 @@ export default function DashboardPage() {
   const handleSelect = (id) => {
     const patient = patients.find((p) => p.id === id);
     setSelectedPatient(patient || null);
-    setActiveSection('oceny');
+    setActiveSection('wywiad');
   };
 
   const handleEdit = (patient) => {
@@ -87,6 +87,25 @@ export default function DashboardPage() {
     }
   };
 
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'wywiad':
+        return <KartaWywiadu patient={selectedPatient} />;
+      case 'oceny':
+        return <SectionPlaceholder>Ocena układów — w budowie</SectionPlaceholder>;
+      case 'diagnozy':
+        return <SectionPlaceholder>Diagnozy i plany — w budowie</SectionPlaceholder>;
+      case 'zlecenia':
+        return <SectionPlaceholder>Zlecenia i interwencje — w budowie</SectionPlaceholder>;
+      case 'analiza':
+        return <SectionPlaceholder>Analiza danych — w budowie</SectionPlaceholder>;
+      case 'raport':
+        return <SectionPlaceholder>Raport pielęgniarski — w budowie</SectionPlaceholder>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <Layout>
       {selectedPatient && (
@@ -94,40 +113,44 @@ export default function DashboardPage() {
           patient={selectedPatient}
           activeSection={activeSection}
           onSectionChange={setActiveSection}
-          onDeselect={() => setSelectedPatient(null)}
+          onDeselect={() => { setSelectedPatient(null); setActiveSection('lista'); }}
         />
       )}
       <Container $hasSidebar={!!selectedPatient}>
-        <Header>
-          <h1>Lista Pacjentów</h1>
-          <AddBtn onClick={() => setShowAdd(true)}>+ Dodaj pacjenta</AddBtn>
-        </Header>
+        {(!selectedPatient || activeSection === 'lista') ? (
+          <>
+            <Header>
+              <h1>Lista Pacjentów</h1>
+              <AddBtn onClick={() => setShowAdd(true)}>+ Dodaj pacjenta</AddBtn>
+            </Header>
 
-        <Tabs>
-          {TABS.map((tab) => (
-            <Tab
-              key={tab.key}
-              $active={activeTab === tab.key}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </Tab>
-          ))}
-        </Tabs>
+            <Tabs>
+              {TABS.map((tab) => (
+                <Tab
+                  key={tab.key}
+                  $active={activeTab === tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                >
+                  {tab.label}
+                </Tab>
+              ))}
+            </Tabs>
 
-        {loading ? (
-          <Loader />
-        ) : activeSection === 'wywiad' && selectedPatient ? (
-          <KartaWywiadu patient={selectedPatient} />
+            {loading ? (
+              <Loader />
+            ) : (
+              <PatientList
+                patients={patients}
+                onStatusChange={handleStatusChange}
+                onSelect={handleSelect}
+                onEdit={handleEdit}
+                selectedId={selectedPatient?.id}
+                onTransfer={(p) => setTransferPatient(p)}
+              />
+            )}
+          </>
         ) : (
-          <PatientList
-            patients={patients}
-            onStatusChange={handleStatusChange}
-            onSelect={handleSelect}
-            onEdit={handleEdit}
-            selectedId={selectedPatient?.id}
-            onTransfer={(p) => setTransferPatient(p)}
-          />
+          renderSection()
         )}
 
         {showAdd && (
@@ -240,6 +263,16 @@ const Loading = styled.div`
   text-align: center;
   padding: 3rem;
   color: #999;
+`;
+
+const SectionPlaceholder = styled.div`
+  text-align: center;
+  padding: 4rem 2rem;
+  font-size: 1.2rem;
+  color: #999;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 `;
 
 const TransferOverlay = styled.div`
