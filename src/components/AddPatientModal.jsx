@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import api from '../api/axios';
 
@@ -19,27 +19,114 @@ const WOJEWODZTWA = [
 const STAN_CYWILNY = ['kawaler', 'panna', 'mężatka', 'mąż', 'wdowa', 'wdowiec'];
 const WYKSZTALCENIE = ['podstawowe', 'gimnazjalne', 'zasadnicze zawodowe', 'średnie', 'wyższe'];
 
-export default function AddPatientModal({ onClose, onAdded, editData }) {
+function AutocompleteInput({ value, onChange, options, placeholder, name }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes((value || '').toLowerCase())
+  );
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+  return (
+    <ACWrapper ref={ref}>
+      <input
+        name={name}
+        value={value}
+        onChange={(e) => { onChange(e); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <ACDropdown>
+          {filtered.slice(0, 8).map((o) => (
+            <ACOption
+              key={o}
+              onMouseDown={() => {
+                onChange({ target: { name, value: o } });
+                setOpen(false);
+              }}
+            >
+              {o}
+            </ACOption>
+          ))}
+        </ACDropdown>
+      )}
+    </ACWrapper>
+  );
+}
+
+export default function AddPatientModal({ onClose, onAdded, editData, jednostka }) {
   const isEdit = !!editData;
-  const [form, setForm] = useState({
-    imie: '', nazwisko: '', nazwisko_panienskie: '', plec: '',
-    pesel: '', wiek: '', data_urodzenia: '',
-    kraj_urodzenia: '', wojewodztwo_urodzenia: '', miejsce_urodzenia: '',
-    kraj_zamieszkania: '', wojewodztwo_zamieszkania: '', powiat_zamieszkania: '',
-    miejsce_zamieszkania: '', kod_pocztowy: '', ulica_zamieszkania: '',
-    nr_domu: '', nr_mieszkania: '',
-    stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
-    opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '',
-    lokalizacja: '',
-    ...(editData ? Object.fromEntries(
-      Object.entries(editData).filter(([_, v]) => v != null).map(([k, v]) => [k, String(v)])
-    ) : {}),
-  });
+
+  const initForm = () => {
+    if (editData) {
+      const dp = editData.dane_personalne || {};
+      const adr = editData.adres || {};
+      const dd = editData.dane_dodatkowe || {};
+      const dok = editData.dane_opiekuna || {};
+      return {
+        imie: editData.imie || '', nazwisko: editData.nazwisko || '',
+        pesel: editData.pesel || '', plec: editData.plec || '',
+        data_urodzenia: editData.data_urodzenia || '',
+        wiek: editData.wiek != null ? String(editData.wiek) : '',
+        numer_ksiegi_glownej: editData.numer_ksiegi_glownej || '',
+        nazwisko_panienskie: dp.nazwisko_panienskie || '',
+        kraj_urodzenia: dp.kraj_urodzenia || '',
+        miejsce_urodzenia: dp.miejsce_urodzenia || '',
+        kraj_zamieszkania: adr.kraj || '', wojewodztwo: adr.wojewodztwo || '',
+        powiat: adr.powiat || '', miejscowosc: adr.miejscowosc || '',
+        kod_pocztowy: adr.kod_pocztowy || '', ulica: adr.ulica || '',
+        nr_domu: adr.nr_domu || '', nr_mieszkania: adr.nr_mieszkania || '',
+        stan_cywilny: dd.stan_cywilny || '', wyksztalcenie: dd.wyksztalcenie || '',
+        zawod_wykonywany: dd.zawod_wykonywany || '',
+        opiekun_imie: dok.imie || '', opiekun_nazwisko: dok.nazwisko || '',
+        opiekun_telefon: dok.telefon || '',
+      };
+    }
+    return {
+      imie: '', nazwisko: '', pesel: '', plec: '', data_urodzenia: '', wiek: '',
+      numer_ksiegi_glownej: '', nazwisko_panienskie: '', kraj_urodzenia: '',
+      miejsce_urodzenia: '', kraj_zamieszkania: '', wojewodztwo: '', powiat: '',
+      miejscowosc: '', kod_pocztowy: '', ulica: '', nr_domu: '', nr_mieszkania: '',
+      stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
+      opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '',
+    };
+  };
+
+  const [form, setForm] = useState(initForm);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'pesel') {
+      const digits = value.replace(/\D/g, '').slice(0, 11);
+      setForm((prev) => {
+        const next = { ...prev, pesel: digits };
+        if (digits.length === 11) {
+          const year = parseInt(digits.substring(0, 2), 10);
+          const month = parseInt(digits.substring(2, 4), 10);
+          let fullYear, realMonth;
+          if (month > 20) { fullYear = 2000 + year; realMonth = month - 20; }
+          else { fullYear = 1900 + year; realMonth = month; }
+          const day = digits.substring(4, 6);
+          const dateStr = `${fullYear}-${String(realMonth).padStart(2, '0')}-${day}`;
+          const age = Math.floor((Date.now() - new Date(dateStr)) / (365.25 * 24 * 60 * 60 * 1000));
+          next.data_urodzenia = dateStr;
+          next.wiek = age >= 0 ? String(age) : '';
+        }
+        return next;
+      });
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
 
     if (name === 'data_urodzenia' && value) {
@@ -50,28 +137,27 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
         wiek: age >= 0 ? String(age) : '',
       }));
     }
-
-    if (name === 'pesel' && value.length === 11) {
-      const year = parseInt(value.substring(0, 2), 10);
-      const month = parseInt(value.substring(2, 4), 10);
-      let fullYear, realMonth;
-      if (month > 20) {
-        fullYear = 2000 + year;
-        realMonth = month - 20;
-      } else {
-        fullYear = 1900 + year;
-        realMonth = month;
-      }
-      const day = value.substring(4, 6);
-      const dateStr = `${fullYear}-${String(realMonth).padStart(2, '0')}-${day}`;
-      const age = Math.floor((Date.now() - new Date(dateStr)) / (365.25 * 24 * 60 * 60 * 1000));
-      setForm((prev) => ({
-        ...prev,
-        data_urodzenia: dateStr,
-        wiek: age >= 0 ? String(age) : '',
-      }));
-    }
   };
+
+  useEffect(() => {
+    const kod = form.kod_pocztowy;
+    if (!/^\d{2}-\d{3}$/.test(kod)) return;
+    const ctrl = new AbortController();
+    fetch(`https://kodpocztowy.intami.pl/api/${kod}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && data.length > 0) {
+          setForm((prev) => ({
+            ...prev,
+            miejscowosc: data[0].miejscowosc || prev.miejscowosc,
+            wojewodztwo: (data[0].wojewodztwo || '').toUpperCase() || prev.wojewodztwo,
+            powiat: data[0].powiat || prev.powiat,
+          }));
+        }
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [form.kod_pocztowy]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,17 +165,41 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
     setLoading(true);
 
     try {
-      const payload = { ...form };
-      if (payload.wiek) payload.wiek = parseInt(payload.wiek, 10);
-      else delete payload.wiek;
-      Object.keys(payload).forEach((k) => {
-        if (payload[k] === '') delete payload[k];
-      });
-      delete payload.id;
-      delete payload.autor;
-      delete payload.created_by;
-      delete payload.created_at;
-      delete payload.updated_at;
+      const payload = {
+        imie: form.imie,
+        nazwisko: form.nazwisko,
+        pesel: form.pesel,
+        plec: form.plec || null,
+        data_urodzenia: form.data_urodzenia || null,
+        wiek: form.wiek ? parseInt(form.wiek, 10) : null,
+        numer_ksiegi_glownej: form.numer_ksiegi_glownej || null,
+        jednostka: jednostka || null,
+        dane_personalne: {
+          nazwisko_panienskie: form.nazwisko_panienskie || null,
+          kraj_urodzenia: form.kraj_urodzenia || null,
+          miejsce_urodzenia: form.miejsce_urodzenia || null,
+        },
+        adres: {
+          kraj: form.kraj_zamieszkania || null,
+          wojewodztwo: form.wojewodztwo || null,
+          powiat: form.powiat || null,
+          miejscowosc: form.miejscowosc || null,
+          kod_pocztowy: form.kod_pocztowy || null,
+          ulica: form.ulica || null,
+          nr_domu: form.nr_domu || null,
+          nr_mieszkania: form.nr_mieszkania || null,
+        },
+        dane_dodatkowe: {
+          stan_cywilny: form.stan_cywilny || null,
+          wyksztalcenie: form.wyksztalcenie || null,
+          zawod_wykonywany: form.zawod_wykonywany || null,
+        },
+        dane_opiekuna: {
+          imie: form.opiekun_imie || null,
+          nazwisko: form.opiekun_nazwisko || null,
+          telefon: form.opiekun_telefon || null,
+        },
+      };
 
       if (isEdit) {
         await api.put(`/patients/${editData.id}`, payload);
@@ -153,7 +263,7 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
           <Row3>
             <Field>
               <label>PESEL *</label>
-              <input name="pesel" value={form.pesel} onChange={handleChange} maxLength={11} pattern="[0-9]{11}" title="PESEL musi mieć 11 cyfr" required />
+              <input name="pesel" value={form.pesel} onChange={handleChange} inputMode="numeric" maxLength={11} placeholder="00000000000" required />
             </Field>
             <Field>
               <label>Data urodzenia</label>
@@ -167,18 +277,12 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
 
           <Row3>
             <Field>
-              <label>Kraj urodzenia</label>
-              <select name="kraj_urodzenia" value={form.kraj_urodzenia} onChange={handleChange}>
-                <option value="">-- wybierz --</option>
-                {KRAJE.map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
+              <label>Numer księgi głównej</label>
+              <input name="numer_ksiegi_glownej" value={form.numer_ksiegi_glownej} onChange={handleChange} />
             </Field>
             <Field>
-              <label>Województwo urodzenia</label>
-              <select name="wojewodztwo_urodzenia" value={form.wojewodztwo_urodzenia} onChange={handleChange}>
-                <option value="">-- wybierz --</option>
-                {WOJEWODZTWA.map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
+              <label>Kraj urodzenia</label>
+              <AutocompleteInput name="kraj_urodzenia" value={form.kraj_urodzenia} onChange={handleChange} options={KRAJE} placeholder="Wpisz kraj..." />
             </Field>
             <Field>
               <label>Miejsce urodzenia</label>
@@ -190,37 +294,31 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
 
           <Row3>
             <Field>
-              <label>Kraj zamieszkania</label>
-              <select name="kraj_zamieszkania" value={form.kraj_zamieszkania} onChange={handleChange}>
-                <option value="">-- wybierz --</option>
-                {KRAJE.map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
+              <label>Kod pocztowy</label>
+              <input name="kod_pocztowy" value={form.kod_pocztowy} onChange={handleChange} placeholder="00-000" />
+            </Field>
+            <Field>
+              <label>Miejscowość</label>
+              <input name="miejscowosc" value={form.miejscowosc} onChange={handleChange} />
             </Field>
             <Field>
               <label>Województwo</label>
-              <select name="wojewodztwo_zamieszkania" value={form.wojewodztwo_zamieszkania} onChange={handleChange}>
-                <option value="">-- wybierz --</option>
-                {WOJEWODZTWA.map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
-            </Field>
-            <Field>
-              <label>Powiat</label>
-              <input name="powiat_zamieszkania" value={form.powiat_zamieszkania} onChange={handleChange} />
+              <AutocompleteInput name="wojewodztwo" value={form.wojewodztwo} onChange={handleChange} options={WOJEWODZTWA} placeholder="Wpisz województwo..." />
             </Field>
           </Row3>
 
           <Row3>
             <Field>
-              <label>Miejscowość</label>
-              <input name="miejsce_zamieszkania" value={form.miejsce_zamieszkania} onChange={handleChange} />
+              <label>Powiat</label>
+              <input name="powiat" value={form.powiat} onChange={handleChange} />
             </Field>
             <Field>
-              <label>Kod pocztowy</label>
-              <input name="kod_pocztowy" value={form.kod_pocztowy} onChange={handleChange} placeholder="99-999" />
+              <label>Kraj zamieszkania</label>
+              <AutocompleteInput name="kraj_zamieszkania" value={form.kraj_zamieszkania} onChange={handleChange} options={KRAJE} placeholder="Wpisz kraj..." />
             </Field>
             <Field>
               <label>Ulica</label>
-              <input name="ulica_zamieszkania" value={form.ulica_zamieszkania} onChange={handleChange} />
+              <input name="ulica" value={form.ulica} onChange={handleChange} />
             </Field>
           </Row3>
 
@@ -240,17 +338,11 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
           <Row3>
             <Field>
               <label>Stan cywilny</label>
-              <select name="stan_cywilny" value={form.stan_cywilny} onChange={handleChange}>
-                <option value="">-- wybierz --</option>
-                {STAN_CYWILNY.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <AutocompleteInput name="stan_cywilny" value={form.stan_cywilny} onChange={handleChange} options={STAN_CYWILNY} placeholder="Wpisz stan cywilny..." />
             </Field>
             <Field>
               <label>Wykształcenie</label>
-              <select name="wyksztalcenie" value={form.wyksztalcenie} onChange={handleChange}>
-                <option value="">-- wybierz --</option>
-                {WYKSZTALCENIE.map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
+              <AutocompleteInput name="wyksztalcenie" value={form.wyksztalcenie} onChange={handleChange} options={WYKSZTALCENIE} placeholder="Wpisz wykształcenie..." />
             </Field>
             <Field>
               <label>Zawód wykonywany</label>
@@ -274,13 +366,6 @@ export default function AddPatientModal({ onClose, onAdded, editData }) {
               <input name="opiekun_telefon" value={form.opiekun_telefon} onChange={handleChange} />
             </Field>
           </Row3>
-
-          <SectionTitle>Lokalizacja</SectionTitle>
-
-          <Field>
-            <label>Lokalizacja (oddział / sala)</label>
-            <input name="lokalizacja" value={form.lokalizacja} onChange={handleChange} placeholder="np. Oddział Okulistyki, sala: 2" />
-          </Field>
 
           <Buttons>
             <BtnCancel type="button" onClick={onClose}>Anuluj</BtnCancel>
@@ -451,5 +536,37 @@ const BtnSubmit = styled.button`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+`;
+
+const ACWrapper = styled.div`
+  position: relative;
+  input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+`;
+
+const ACDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 0 0 8px 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+`;
+
+const ACOption = styled.div`
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  &:hover {
+    background: #e8f4f8;
+    color: #2387B6;
   }
 `;

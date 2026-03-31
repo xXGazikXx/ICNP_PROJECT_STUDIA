@@ -7,6 +7,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [jednostka, setJednostkaState] = useState(localStorage.getItem('jednostka') || '');
+
+  const setJednostka = (j) => {
+    setJednostkaState(j);
+    localStorage.setItem('jednostka', j);
+  };
 
   useEffect(() => {
     if (token) {
@@ -42,7 +48,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, jednostka, setJednostka }}>
       {children}
     </AuthContext.Provider>
   );

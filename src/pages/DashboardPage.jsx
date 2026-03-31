@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import PatientList from '../components/PatientList';
 import AddPatientModal from '../components/AddPatientModal';
 import PatientSidebar from '../components/PatientSidebar';
@@ -12,6 +13,7 @@ const TABS = [
 ];
 
 export default function DashboardPage() {
+  const { jednostka } = useAuth();
   const [patients, setPatients] = useState([]);
   const [activeTab, setActiveTab] = useState('aktualny');
   const [showAdd, setShowAdd] = useState(false);
@@ -19,12 +21,14 @@ export default function DashboardPage() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeSection, setActiveSection] = useState('lista');
   const [loading, setLoading] = useState(true);
+  const [transferPatient, setTransferPatient] = useState(null);
+  const [transferTarget, setTransferTarget] = useState('');
 
   const fetchPatients = async () => {
     try {
-      const res = await api.get('/patients', {
-        params: { status: activeTab },
-      });
+      const params = { status: activeTab };
+      if (jednostka) params.jednostka = jednostka;
+      const res = await api.get('/patients', { params });
       setPatients(res.data);
     } catch (err) {
       console.error('Błąd ładowania pacjentów:', err);
@@ -36,7 +40,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setLoading(true);
     fetchPatients();
-  }, [activeTab]);
+  }, [activeTab, jednostka]);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -60,6 +64,18 @@ export default function DashboardPage() {
 
   const handleEdit = (patient) => {
     setEditPatient(patient);
+  };
+
+  const handleTransfer = async () => {
+    if (!transferPatient || !transferTarget) return;
+    try {
+      await api.put(`/patients/${transferPatient.id}`, { jednostka: transferTarget });
+      setTransferPatient(null);
+      setTransferTarget('');
+      fetchPatients();
+    } catch (err) {
+      console.error('Błąd przenoszenia:', err);
+    }
   };
 
   return (
@@ -99,6 +115,7 @@ export default function DashboardPage() {
             onSelect={handleSelect}
             onEdit={handleEdit}
             selectedId={selectedPatient?.id}
+            onTransfer={(p) => setTransferPatient(p)}
           />
         )}
 
@@ -106,6 +123,7 @@ export default function DashboardPage() {
           <AddPatientModal
             onClose={() => setShowAdd(false)}
             onAdded={handlePatientAdded}
+            jednostka={jednostka}
           />
         )}
 
@@ -117,7 +135,27 @@ export default function DashboardPage() {
               fetchPatients();
             }}
             editData={editPatient}
+            jednostka={jednostka}
           />
+        )}
+
+        {transferPatient && (
+          <TransferOverlay onClick={() => setTransferPatient(null)}>
+            <TransferModal onClick={(e) => e.stopPropagation()}>
+              <h3>Przenieś pacjenta: {transferPatient.imie} {transferPatient.nazwisko}</h3>
+              <p>Obecna jednostka: <strong>{transferPatient.jednostka || 'brak'}</strong></p>
+              <TransferSelect value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
+                <option value="">-- Wybierz docelową jednostkę --</option>
+                {['Chirurgia ogólna','Kardiologia','Neurologia','Ortopedia','Ginekologia','Pediatria','Interna','Onkologia','Urologia','Okulistyka','Dermatologia','Psychiatria','Geriatria','Rehabilitacja','Intensywna terapia (OIT)'].map((j) => (
+                  <option key={j} value={j}>{j}</option>
+                ))}
+              </TransferSelect>
+              <TransferBtns>
+                <BtnCancel onClick={() => setTransferPatient(null)}>Anuluj</BtnCancel>
+                <BtnTransfer onClick={handleTransfer} disabled={!transferTarget}>Przenieś</BtnTransfer>
+              </TransferBtns>
+            </TransferModal>
+          </TransferOverlay>
         )}
       </Container>
     </Layout>
@@ -191,4 +229,65 @@ const Loading = styled.div`
   text-align: center;
   padding: 3rem;
   color: #999;
+`;
+
+const TransferOverlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const TransferModal = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 440px;
+  max-width: 95vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+
+  h3 { margin-bottom: 0.5rem; color: #1a1a2e; }
+  p { color: #666; margin-bottom: 1rem; font-size: 0.9rem; }
+`;
+
+const TransferSelect = styled.select`
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  &:focus { outline: none; border-color: #2387B6; }
+`;
+
+const TransferBtns = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+`;
+
+const BtnCancel = styled.button`
+  padding: 10px 20px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  &:hover { background: #f5f5f5; }
+`;
+
+const BtnTransfer = styled.button`
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #8b5cf6;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #7c3aed; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;

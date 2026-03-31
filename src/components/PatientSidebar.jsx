@@ -21,9 +21,8 @@ export default function PatientSidebar({ patient, activeSection, onSectionChange
         <CardInfo>
           <CardName>{patient.imie} {patient.nazwisko}</CardName>
           <CardPesel>PESEL: {patient.pesel}</CardPesel>
-          {patient.lokalizacja && <CardLoc>{patient.lokalizacja}</CardLoc>}
         </CardInfo>
-        <CloseBtn onClick={onDeselect} title="Zamknij panel pacjenta">✕</CloseBtn>
+        <ChangeBtn onClick={onDeselect}>Zmień pacjenta</ChangeBtn>
       </PatientCard>
 
       <NavList>
@@ -58,9 +57,9 @@ const PatientCard = styled.div`
   padding: 1rem;
   border-bottom: 2px solid #2387B6;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  position: relative;
+  gap: 8px;
 `;
 
 const Avatar = styled.div`
@@ -96,27 +95,20 @@ const CardPesel = styled.div`
   color: #777;
 `;
 
-const CardLoc = styled.div`
-  font-size: 0.7rem;
-  color: #999;
-  margin-top: 2px;
-`;
-
-const CloseBtn = styled.button`
-  position: absolute;
-  top: 8px;
-  right: 8px;
+const ChangeBtn = styled.button`
+  width: 100%;
+  padding: 8px;
+  background: #2387B6;
+  color: white;
   border: none;
-  background: none;
-  font-size: 1rem;
-  color: #999;
+  border-radius: 6px;
+  font-size: 0.8rem;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  transition: all 0.2s;
+  margin-top: 4px;
 
   &:hover {
-    background: #f0f0f0;
-    color: #333;
+    background: #1b6d94;
   }
 `;
 

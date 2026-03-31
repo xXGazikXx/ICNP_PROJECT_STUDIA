@@ -13,7 +13,7 @@ const STATUS_LABELS = {
   archiwum: 'Archiwum',
 };
 
-export default function PatientList({ patients, onStatusChange, onSelect, onEdit, selectedId }) {
+export default function PatientList({ patients, onStatusChange, onSelect, onEdit, selectedId, onTransfer }) {
   const { user } = useAuth();
   const canRestore = user?.role === 'admin' || user?.role === 'prowadzacy';
 
@@ -29,7 +29,7 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
           <th>Imię</th>
           <th>Nazwisko</th>
           <th>PESEL</th>
-          <th>Lokalizacja</th>
+          <th>Jednostka</th>
           <th>Status</th>
           <th>Autor</th>
           <th>Akcje</th>
@@ -42,7 +42,7 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
             <td>{p.imie}</td>
             <td>{p.nazwisko}</td>
             <td>{p.pesel}</td>
-            <td>{p.lokalizacja || '—'}</td>
+            <td>{p.jednostka || '—'}</td>
             <td>
               <StatusBadge $color={STATUS_COLORS[p.status]}>
                 {STATUS_LABELS[p.status]}
@@ -60,9 +60,14 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
                   Edytuj
                 </ActionBtn>
                 {p.status === 'aktualny' && (
-                  <ActionBtn onClick={() => onStatusChange(p.id, 'wypisany')}>
-                    Wypisz
-                  </ActionBtn>
+                  <>
+                    <ActionBtn onClick={() => onStatusChange(p.id, 'wypisany')}>
+                      Wypisz
+                    </ActionBtn>
+                    <ActionBtn $transfer onClick={() => onTransfer(p)}>
+                      Przenieś
+                    </ActionBtn>
+                  </>
                 )}
                 {p.status === 'wypisany' && (
                   <>
@@ -149,10 +154,10 @@ const StatusBadge = styled.span`
 
 const ActionBtn = styled.button`
   padding: 5px 10px;
-  border: 1px solid ${(p) => (p.$primary ? '#2387B6' : p.$restore ? '#22c55e' : '#ddd')};
+  border: 1px solid ${(p) => (p.$primary ? '#2387B6' : p.$restore ? '#22c55e' : p.$transfer ? '#8b5cf6' : '#ddd')};
   border-radius: 6px;
-  background: ${(p) => (p.$primary ? '#2387B6' : p.$restore ? '#22c55e' : 'white')};
-  color: ${(p) => (p.$primary || p.$restore ? 'white' : '#333')};
+  background: ${(p) => (p.$primary ? '#2387B6' : p.$restore ? '#22c55e' : p.$transfer ? '#8b5cf6' : 'white')};
+  color: ${(p) => (p.$primary || p.$restore || p.$transfer ? 'white' : '#333')};
   font-size: 0.78rem;
   white-space: nowrap;
   transition: all 0.2s;
