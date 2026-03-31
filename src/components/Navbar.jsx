@@ -31,9 +31,6 @@ export default function Navbar() {
     <Nav>
       <NavLeft>
         <Logo to="/">ICNP System</Logo>
-        <NavLink to="/" $active={isActive('/')}>
-          Lista pacjentów
-        </NavLink>
         {user?.role === 'admin' && (
           <NavLink to="/users" $active={isActive('/users')}>
             Użytkownicy

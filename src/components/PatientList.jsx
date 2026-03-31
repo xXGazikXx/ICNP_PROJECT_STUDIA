@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,16 +17,46 @@ const STATUS_LABELS = {
 export default function PatientList({ patients, onStatusChange, onSelect, onEdit, selectedId, onTransfer }) {
   const { user } = useAuth();
   const canRestore = user?.role === 'admin' || user?.role === 'prowadzacy';
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const filtered = patients.filter((p) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      (p.imie || '').toLowerCase().includes(q) ||
+      (p.nazwisko || '').toLowerCase().includes(q) ||
+      (p.pesel || '').includes(q) ||
+      (p.numer_ksiegi_glownej || '').toLowerCase().includes(q)
+    );
+  });
 
   if (patients.length === 0) {
     return <Empty>Brak pacjentów do wyświetlenia</Empty>;
   }
 
   return (
+    <>
+      <SearchContainer>
+        <SearchBox $open={searchOpen}>
+          <SearchIcon onClick={() => setSearchOpen((o) => !o)} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
+          </SearchIcon>
+          {searchOpen && (
+            <SearchInput
+              type="text"
+              placeholder="Szukaj pacjenta..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+            />
+          )}
+        </SearchBox>
+      </SearchContainer>
     <Table>
       <thead>
         <tr>
-          <th>L.p.</th>
+          <th>Nr księgi</th>
           <th>Imię</th>
           <th>Nazwisko</th>
           <th>PESEL</th>
@@ -36,9 +67,9 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
         </tr>
       </thead>
       <tbody>
-        {patients.map((p, i) => (
+        {filtered.map((p) => (
           <tr key={p.id} className={selectedId === p.id ? 'selected' : ''}>
-            <td>{i + 1}</td>
+            <td>{p.numer_ksiegi_glownej || '—'}</td>
             <td>{p.imie}</td>
             <td>{p.nazwisko}</td>
             <td>{p.pesel}</td>
@@ -92,6 +123,7 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
         ))}
       </tbody>
     </Table>
+    </>
   );
 }
 
@@ -100,6 +132,42 @@ const Empty = styled.div`
   padding: 3rem;
   color: #999;
   font-size: 1.1rem;
+`;
+
+const SearchContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+`;
+
+const SearchBox = styled.div`
+  display: flex;
+  align-items: center;
+  background: #1a1a2e;
+  border-radius: 160px;
+  height: 42px;
+  width: ${(p) => (p.$open ? '260px' : '42px')};
+  padding: 0 12px;
+  transition: width 0.3s ease;
+  gap: 8px;
+`;
+
+const SearchIcon = styled.svg`
+  width: 18px;
+  height: 18px;
+  fill: white;
+  flex-shrink: 0;
+  cursor: pointer;
+`;
+
+const SearchInput = styled.input`
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 0.9rem;
+  width: 100%;
+  &::placeholder { color: rgba(255,255,255,0.6); }
 `;
 
 const Table = styled.table`
@@ -113,7 +181,7 @@ const Table = styled.table`
   th {
     background: #f8f9fa;
     padding: 12px 16px;
-    text-align: left;
+    text-align: center;
     font-weight: 600;
     font-size: 0.85rem;
     color: #555;
@@ -126,6 +194,7 @@ const Table = styled.table`
     padding: 12px 16px;
     border-bottom: 1px solid #f0f0f0;
     font-size: 0.95rem;
+    text-align: center;
   }
 
   tbody tr:hover {
@@ -141,6 +210,7 @@ const Actions = styled.div`
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
+  justify-content: center;
 `;
 
 const StatusBadge = styled.span`

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../components/Notification';
 import PatientList from '../components/PatientList';
 import AddPatientModal from '../components/AddPatientModal';
 import PatientSidebar from '../components/PatientSidebar';
@@ -14,6 +15,7 @@ const TABS = [
 
 export default function DashboardPage() {
   const { jednostka } = useAuth();
+  const notify = useNotification();
   const [patients, setPatients] = useState([]);
   const [activeTab, setActiveTab] = useState('aktualny');
   const [showAdd, setShowAdd] = useState(false);
@@ -45,21 +47,24 @@ export default function DashboardPage() {
   const handleStatusChange = async (id, newStatus) => {
     try {
       await api.put(`/patients/${id}`, { status: newStatus });
+      notify(`Status pacjenta zmieniony na: ${newStatus}`, 'success');
       fetchPatients();
       if (selectedPatient?.id === id) setSelectedPatient(null);
     } catch (err) {
       console.error('Błąd zmiany statusu:', err);
+      notify('Błąd zmiany statusu pacjenta', 'error');
     }
   };
 
   const handlePatientAdded = () => {
+    notify('Pacjent został zapisany pomyślnie', 'success');
     fetchPatients();
   };
 
   const handleSelect = (id) => {
     const patient = patients.find((p) => p.id === id);
     setSelectedPatient(patient || null);
-    setActiveSection('wywiad');
+    setActiveSection('oceny');
   };
 
   const handleEdit = (patient) => {
@@ -70,11 +75,13 @@ export default function DashboardPage() {
     if (!transferPatient || !transferTarget) return;
     try {
       await api.put(`/patients/${transferPatient.id}`, { jednostka: transferTarget });
+      notify(`Pacjent przeniesiony do: ${transferTarget}`, 'success');
       setTransferPatient(null);
       setTransferTarget('');
       fetchPatients();
     } catch (err) {
       console.error('Błąd przenoszenia:', err);
+      notify('Błąd przenoszenia pacjenta', 'error');
     }
   };
 

@@ -79,6 +79,7 @@ const Avatar = styled.div`
 const CardInfo = styled.div`
   flex: 1;
   min-width: 0;
+  text-align: center;
 `;
 
 const CardName = styled.div`
