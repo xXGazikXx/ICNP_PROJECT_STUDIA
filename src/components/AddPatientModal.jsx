@@ -428,13 +428,3 @@ const BtnSubmit = styled.button`
     cursor: not-allowed;
   }
 `;
-
-  &:hover {
-    background: #0b7c72;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
