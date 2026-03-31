@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import api from '../api/axios';
+import ToggleCheckbox from './ToggleCheckbox';
 
 const KRAJE = [
   'Polska', 'Niemcy', 'Francja', 'Wielka Brytania', 'Włochy', 'Hiszpania',
@@ -22,6 +23,8 @@ const WYKSZTALCENIE = ['podstawowe', 'gimnazjalne', 'zasadnicze zawodowe', 'śre
 const TYPY_DOKUMENTU = ['PESEL', 'Paszport', 'Inny dokument'];
 const KATEGORIE_PACJENTA = ['Kat I', 'Kat II', 'Kat III'];
 const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
+const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-Stokesa', 'Kussmaula', 'Biota', 'inny'];
+const TYPY_KONTAKTU = ['słowny', 'pozasłowny', 'pisemny'];
 
 function AutocompleteInput({ value, onChange, options, placeholder, name }) {
   const [open, setOpen] = useState(false);
@@ -127,6 +130,61 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
   const [form, setForm] = useState(initForm);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  /* ─── Karta Wywiadu state ─── */
+  const initKW = () => {
+    const kw = editData?.karta_wywiadu || {};
+    return {
+      kontakt: { typ: kw.kontakt?.typ || '', logiczny: kw.kontakt?.logiczny || false, zachowany: kw.kontakt?.zachowany || false, brak_kontaktu: kw.kontakt?.brak_kontaktu || false },
+      choroby: { objawy_obecnej: kw.choroby?.objawy_obecnej || '', przebyte: kw.choroby?.przebyte || [{ choroba: '', od_kiedy: '', leczenie: '' }], zakazne: kw.choroby?.zakazne || [{ choroba: '', od_kiedy: '' }], zabiegi: kw.choroby?.zabiegi || [{ zabieg: '', data: '' }] },
+      parametry: { wzrost: kw.parametry?.wzrost || '', masa: kw.parametry?.masa || '', bmi: kw.parametry?.bmi || '', obwod_glowy: kw.parametry?.obwod_glowy || '', obwod_klatki: kw.parametry?.obwod_klatki || '' },
+      oznaki_zycia: { temperatura: kw.oznaki_zycia?.temperatura || '', ctk_skurczowe: kw.oznaki_zycia?.ctk_skurczowe || '', ctk_rozkurczowe: kw.oznaki_zycia?.ctk_rozkurczowe || '', tetno: kw.oznaki_zycia?.tetno || '', oddech: kw.oznaki_zycia?.oddech || '', rodzaj_oddechu: kw.oznaki_zycia?.rodzaj_oddechu || 'prawidłowy' },
+      ocena_bolu: { wpisy: kw.ocena_bolu?.wpisy || [{ kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' }] },
+      krew: { hbs: kw.krew?.hbs || 'nie badano', hiv: kw.krew?.hiv || 'nie badano', transfuzje: kw.krew?.transfuzje || false, reakcje: kw.krew?.reakcje || '' },
+      alergie: { wystepuja: kw.alergie?.wystepuja || false, wpisy: kw.alergie?.wpisy || [{ alergia: '', opis: '' }] },
+      styl_zycia: { palenie: kw.styl_zycia?.palenie || false, palenie_ile: kw.styl_zycia?.palenie_ile || '', alkohol: kw.styl_zycia?.alkohol || false, alkohol_ile: kw.styl_zycia?.alkohol_ile || '', narkotyki: kw.styl_zycia?.narkotyki || false, narkotyki_wpisy: kw.styl_zycia?.narkotyki_wpisy || [{ nazwa: '', czestotliwosc: '' }], aktywnosc: kw.styl_zycia?.aktywnosc || '', dieta: kw.styl_zycia?.dieta || '' },
+    };
+  };
+  const [kw, setKw] = useState(initKW);
+  const [openSections, setOpenSections] = useState({});
+
+  const kwUpdate = useCallback((section, field, value) => {
+    setKw((prev) => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
+  }, []);
+
+  const toggleKwSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const kwUpdateRow = (section, field, index, key, value) => {
+    setKw((prev) => {
+      const rows = [...prev[section][field]];
+      rows[index] = { ...rows[index], [key]: value };
+      return { ...prev, [section]: { ...prev[section], [field]: rows } };
+    });
+  };
+  const kwAddRow = (section, field, template) => {
+    setKw((prev) => ({ ...prev, [section]: { ...prev[section], [field]: [...prev[section][field], { ...template }] } }));
+  };
+  const kwRemoveRow = (section, field, index) => {
+    setKw((prev) => {
+      const rows = prev[section][field].filter((_, i) => i !== index);
+      return { ...prev, [section]: { ...prev[section], [field]: rows.length ? rows : [{ ...prev[section][field][0] }] } };
+    });
+  };
+
+  // BMI auto-calc
+  useEffect(() => {
+    const w = parseFloat(kw.parametry.masa);
+    const h = parseFloat(kw.parametry.wzrost) / 100;
+    if (w > 0 && h > 0) kwUpdate('parametry', 'bmi', (w / (h * h)).toFixed(1));
+  }, [kw.parametry.masa, kw.parametry.wzrost, kwUpdate]);
+
+  const handleBrakKontaktu = () => {
+    if (!kw.kontakt.brak_kontaktu) {
+      setKw((prev) => ({ ...prev, kontakt: { ...prev.kontakt, brak_kontaktu: true, logiczny: false, zachowany: false, typ: '' } }));
+    } else {
+      kwUpdate('kontakt', 'brak_kontaktu', false);
+    }
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
@@ -249,6 +307,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
           telefon: form.opiekun_telefon || null,
           pokrewienstwo: form.opiekun_pokrewienstwo || null,
         },
+        karta_wywiadu: kw,
       };
 
       if (isEdit) {
@@ -498,6 +557,301 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
             <textarea name="przyczyna_przyjecia" value={form.przyczyna_przyjecia} onChange={handleChange} rows={3} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
 
+          {/* ═══ KARTA WYWIADU SECTIONS ═══ */}
+          <KWDivider>Karta wywiadu</KWDivider>
+
+          {/* KONTAKT */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('kontakt')}>
+              <KWChevron $open={openSections.kontakt}>▶</KWChevron>
+              <span>Kontakt z pacjentem</span>
+            </KWSectionHeader>
+            {openSections.kontakt && (
+              <KWSectionBody>
+                <Row3>
+                  <Field>
+                    <label>Typ kontaktu</label>
+                    <AutocompleteInput name="__kw_typ_kontaktu" value={kw.kontakt.typ} onChange={(e) => kwUpdate('kontakt', 'typ', e.target.value)} options={TYPY_KONTAKTU} placeholder="Wpisz typ kontaktu..." />
+                  </Field>
+                  <Field style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
+                    <ToggleCheckbox checked={kw.kontakt.logiczny} onChange={() => !kw.kontakt.brak_kontaktu && kwUpdate('kontakt', 'logiczny', !kw.kontakt.logiczny)} label="Kontakt logiczny" />
+                    <ToggleCheckbox checked={kw.kontakt.zachowany} onChange={() => !kw.kontakt.brak_kontaktu && kwUpdate('kontakt', 'zachowany', !kw.kontakt.zachowany)} label="Kontakt zachowany" />
+                  </Field>
+                  <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+                    <ToggleCheckbox checked={kw.kontakt.brak_kontaktu} onChange={handleBrakKontaktu} label="Brak kontaktu" />
+                  </Field>
+                </Row3>
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* CHOROBY */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('choroby')}>
+              <KWChevron $open={openSections.choroby}>▶</KWChevron>
+              <span>Choroby i zabiegi</span>
+            </KWSectionHeader>
+            {openSections.choroby && (
+              <KWSectionBody>
+                <Field>
+                  <label>Objawy choroby obecnej</label>
+                  <textarea rows={3} value={kw.choroby.objawy_obecnej} onChange={(e) => kwUpdate('choroby', 'objawy_obecnej', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
+                </Field>
+                <KWSmallTitle>Choroby przebyte</KWSmallTitle>
+                <KWTable>
+                  <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
+                  <tbody>
+                    {kw.choroby.przebyte.map((row, i) => (
+                      <tr key={i}>
+                        <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'choroba', e.target.value)} /></td>
+                        <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                        <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'leczenie', e.target.value)} /></td>
+                        <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'przebyte', i)}>×</KWRemoveBtn></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </KWTable>
+                <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'przebyte', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</KWAddBtn>
+
+                <KWSmallTitle>Choroby zakaźne</KWSmallTitle>
+                <KWTable>
+                  <thead><tr><th>Choroba</th><th>Od kiedy</th><th></th></tr></thead>
+                  <tbody>
+                    {kw.choroby.zakazne.map((row, i) => (
+                      <tr key={i}>
+                        <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'zakazne', i, 'choroba', e.target.value)} /></td>
+                        <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'zakazne', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                        <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'zakazne', i)}>×</KWRemoveBtn></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </KWTable>
+                <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'zakazne', { choroba: '', od_kiedy: '' })}>+ Dodaj</KWAddBtn>
+
+                <KWSmallTitle>Przebyte zabiegi operacyjne</KWSmallTitle>
+                <KWTable>
+                  <thead><tr><th>Zabieg</th><th>Data</th><th></th></tr></thead>
+                  <tbody>
+                    {kw.choroby.zabiegi.map((row, i) => (
+                      <tr key={i}>
+                        <td><input value={row.zabieg} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'zabieg', e.target.value)} /></td>
+                        <td><input type="date" value={row.data} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'data', e.target.value)} /></td>
+                        <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'zabiegi', i)}>×</KWRemoveBtn></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </KWTable>
+                <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</KWAddBtn>
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* PARAMETRY */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('parametry')}>
+              <KWChevron $open={openSections.parametry}>▶</KWChevron>
+              <span>Parametry</span>
+            </KWSectionHeader>
+            {openSections.parametry && (
+              <KWSectionBody>
+                <Row3>
+                  <Field><label>Wzrost (cm)</label><input type="number" min="0" value={kw.parametry.wzrost} onChange={(e) => kwUpdate('parametry', 'wzrost', e.target.value)} /></Field>
+                  <Field><label>Masa ciała (kg)</label><input type="number" min="0" step="0.1" value={kw.parametry.masa} onChange={(e) => kwUpdate('parametry', 'masa', e.target.value)} /></Field>
+                  <Field><label>BMI</label><input value={kw.parametry.bmi} readOnly style={{ background: '#f0f0f0' }} /></Field>
+                </Row3>
+                <Row2>
+                  <Field><label>Obwód głowy (cm)</label><input type="number" min="0" value={kw.parametry.obwod_glowy} onChange={(e) => kwUpdate('parametry', 'obwod_glowy', e.target.value)} /></Field>
+                  <Field><label>Obwód klatki piersiowej (cm)</label><input type="number" min="0" value={kw.parametry.obwod_klatki} onChange={(e) => kwUpdate('parametry', 'obwod_klatki', e.target.value)} /></Field>
+                </Row2>
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* OZNAKI ŻYCIA */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('oznaki_zycia')}>
+              <KWChevron $open={openSections.oznaki_zycia}>▶</KWChevron>
+              <span>Oznaki życia</span>
+            </KWSectionHeader>
+            {openSections.oznaki_zycia && (
+              <KWSectionBody>
+                <Row3>
+                  <Field><label>Temperatura (°C)</label><input type="number" step="0.1" min="30" max="45" value={kw.oznaki_zycia.temperatura} onChange={(e) => kwUpdate('oznaki_zycia', 'temperatura', e.target.value)} /></Field>
+                  <Field><label>CTK skurczowe (mmHg)</label><input type="number" min="0" value={kw.oznaki_zycia.ctk_skurczowe} onChange={(e) => kwUpdate('oznaki_zycia', 'ctk_skurczowe', e.target.value)} /></Field>
+                  <Field><label>CTK rozkurczowe (mmHg)</label><input type="number" min="0" value={kw.oznaki_zycia.ctk_rozkurczowe} onChange={(e) => kwUpdate('oznaki_zycia', 'ctk_rozkurczowe', e.target.value)} /></Field>
+                </Row3>
+                <Row3>
+                  <Field><label>Tętno (ud./min)</label><input type="number" min="0" value={kw.oznaki_zycia.tetno} onChange={(e) => kwUpdate('oznaki_zycia', 'tetno', e.target.value)} /></Field>
+                  <Field><label>Oddech (odd./min)</label><input type="number" min="0" value={kw.oznaki_zycia.oddech} onChange={(e) => kwUpdate('oznaki_zycia', 'oddech', e.target.value)} /></Field>
+                  <Field>
+                    <label>Rodzaj oddechu</label>
+                    <AutocompleteInput name="__kw_rodzaj_oddechu" value={kw.oznaki_zycia.rodzaj_oddechu} onChange={(e) => kwUpdate('oznaki_zycia', 'rodzaj_oddechu', e.target.value)} options={RODZAJE_ODDECHU} placeholder="Wpisz rodzaj..." />
+                  </Field>
+                </Row3>
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* OCENA BÓLU */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('ocena_bolu')}>
+              <KWChevron $open={openSections.ocena_bolu}>▶</KWChevron>
+              <span>Ocena bólu</span>
+            </KWSectionHeader>
+            {openSections.ocena_bolu && (
+              <KWSectionBody>
+                <KWTable>
+                  <thead><tr><th>Kategoria</th><th>Lokalizacja</th><th>Częstotliwość</th><th>Intensywność</th><th></th></tr></thead>
+                  <tbody>
+                    {kw.ocena_bolu.wpisy.map((row, i) => (
+                      <tr key={i}>
+                        <td>
+                          <select value={row.kategoria} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'kategoria', e.target.value)}>
+                            <option value="">— wybierz —</option><option>ostry</option><option>przewlekły</option><option>nawracający</option>
+                          </select>
+                        </td>
+                        <td><input value={row.lokalizacja} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'lokalizacja', e.target.value)} /></td>
+                        <td>
+                          <select value={row.czestotliwosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'czestotliwosc', e.target.value)}>
+                            <option value="">— wybierz —</option><option>ciągły</option><option>okresowy</option><option>sporadyczny</option>
+                          </select>
+                        </td>
+                        <td><input type="number" min="0" max="10" value={row.intensywnosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'intensywnosc', e.target.value)} /></td>
+                        <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('ocena_bolu', 'wpisy', i)}>×</KWRemoveBtn></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </KWTable>
+                <KWAddBtn type="button" onClick={() => kwAddRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</KWAddBtn>
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* KREW */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('krew')}>
+              <KWChevron $open={openSections.krew}>▶</KWChevron>
+              <span>Krew</span>
+            </KWSectionHeader>
+            {openSections.krew && (
+              <KWSectionBody>
+                <Row3>
+                  <Field>
+                    <label>HBs Ag</label>
+                    <select value={kw.krew.hbs} onChange={(e) => kwUpdate('krew', 'hbs', e.target.value)}>
+                      <option>nie badano</option><option>dodatni</option><option>ujemny</option>
+                    </select>
+                  </Field>
+                  <Field>
+                    <label>HIV</label>
+                    <select value={kw.krew.hiv} onChange={(e) => kwUpdate('krew', 'hiv', e.target.value)}>
+                      <option>nie badano</option><option>dodatni</option><option>ujemny</option>
+                    </select>
+                  </Field>
+                  <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+                    <ToggleCheckbox checked={kw.krew.transfuzje} onChange={() => kwUpdate('krew', 'transfuzje', !kw.krew.transfuzje)} label="Transfuzje krwi" />
+                  </Field>
+                </Row3>
+                {kw.krew.transfuzje && (
+                  <Field>
+                    <label>Reakcje potransfuzyjne</label>
+                    <textarea rows={2} value={kw.krew.reakcje} onChange={(e) => kwUpdate('krew', 'reakcje', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
+                  </Field>
+                )}
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* ALERGIE */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('alergie')}>
+              <KWChevron $open={openSections.alergie}>▶</KWChevron>
+              <span>Alergie</span>
+            </KWSectionHeader>
+            {openSections.alergie && (
+              <KWSectionBody>
+                <KWQuestionRow>
+                  <span>Czy występują alergie?</span>
+                  <ToggleCheckbox checked={kw.alergie.wystepuja} onChange={() => kwUpdate('alergie', 'wystepuja', !kw.alergie.wystepuja)} label={kw.alergie.wystepuja ? 'Tak' : 'Nie'} />
+                </KWQuestionRow>
+                {kw.alergie.wystepuja && (
+                  <>
+                    <KWTable>
+                      <thead><tr><th>Alergia</th><th>Opis reakcji</th><th></th></tr></thead>
+                      <tbody>
+                        {kw.alergie.wpisy.map((row, i) => (
+                          <tr key={i}>
+                            <td><input value={row.alergia} onChange={(e) => kwUpdateRow('alergie', 'wpisy', i, 'alergia', e.target.value)} /></td>
+                            <td><input value={row.opis} onChange={(e) => kwUpdateRow('alergie', 'wpisy', i, 'opis', e.target.value)} /></td>
+                            <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('alergie', 'wpisy', i)}>×</KWRemoveBtn></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </KWTable>
+                    <KWAddBtn type="button" onClick={() => kwAddRow('alergie', 'wpisy', { alergia: '', opis: '' })}>+ Dodaj</KWAddBtn>
+                  </>
+                )}
+              </KWSectionBody>
+            )}
+          </KWSection>
+
+          {/* STYL ŻYCIA */}
+          <KWSection>
+            <KWSectionHeader onClick={() => toggleKwSection('styl_zycia')}>
+              <KWChevron $open={openSections.styl_zycia}>▶</KWChevron>
+              <span>Styl życia</span>
+            </KWSectionHeader>
+            {openSections.styl_zycia && (
+              <KWSectionBody>
+                <KWQuestionRow>
+                  <span>Palenie tytoniu</span>
+                  <ToggleCheckbox checked={kw.styl_zycia.palenie} onChange={() => kwUpdate('styl_zycia', 'palenie', !kw.styl_zycia.palenie)} label={kw.styl_zycia.palenie ? 'Tak' : 'Nie'} />
+                </KWQuestionRow>
+                {kw.styl_zycia.palenie && (
+                  <Field style={{ marginBottom: 12 }}><label>Ile dziennie?</label><input value={kw.styl_zycia.palenie_ile} onChange={(e) => kwUpdate('styl_zycia', 'palenie_ile', e.target.value)} placeholder="np. 10 sztuk" /></Field>
+                )}
+                <KWQuestionRow>
+                  <span>Alkohol</span>
+                  <ToggleCheckbox checked={kw.styl_zycia.alkohol} onChange={() => kwUpdate('styl_zycia', 'alkohol', !kw.styl_zycia.alkohol)} label={kw.styl_zycia.alkohol ? 'Tak' : 'Nie'} />
+                </KWQuestionRow>
+                {kw.styl_zycia.alkohol && (
+                  <Field style={{ marginBottom: 12 }}><label>Ile / jak często?</label><input value={kw.styl_zycia.alkohol_ile} onChange={(e) => kwUpdate('styl_zycia', 'alkohol_ile', e.target.value)} placeholder="np. okazjonalnie" /></Field>
+                )}
+                <KWQuestionRow>
+                  <span>Narkotyki</span>
+                  <ToggleCheckbox checked={kw.styl_zycia.narkotyki} onChange={() => kwUpdate('styl_zycia', 'narkotyki', !kw.styl_zycia.narkotyki)} label={kw.styl_zycia.narkotyki ? 'Tak' : 'Nie'} />
+                </KWQuestionRow>
+                {kw.styl_zycia.narkotyki && (
+                  <>
+                    <KWTable>
+                      <thead><tr><th>Nazwa substancji</th><th>Częstotliwość</th><th></th></tr></thead>
+                      <tbody>
+                        {kw.styl_zycia.narkotyki_wpisy.map((row, i) => (
+                          <tr key={i}>
+                            <td><input value={row.nazwa} onChange={(e) => kwUpdateRow('styl_zycia', 'narkotyki_wpisy', i, 'nazwa', e.target.value)} /></td>
+                            <td><input value={row.czestotliwosc} onChange={(e) => kwUpdateRow('styl_zycia', 'narkotyki_wpisy', i, 'czestotliwosc', e.target.value)} /></td>
+                            <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('styl_zycia', 'narkotyki_wpisy', i)}>×</KWRemoveBtn></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </KWTable>
+                    <KWAddBtn type="button" onClick={() => kwAddRow('styl_zycia', 'narkotyki_wpisy', { nazwa: '', czestotliwosc: '' })}>+ Dodaj</KWAddBtn>
+                  </>
+                )}
+                <Row2 style={{ marginTop: 16 }}>
+                  <Field>
+                    <label>Aktywność fizyczna</label>
+                    <textarea rows={2} value={kw.styl_zycia.aktywnosc} onChange={(e) => kwUpdate('styl_zycia', 'aktywnosc', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
+                  </Field>
+                  <Field>
+                    <label>Dieta / odżywianie</label>
+                    <textarea rows={2} value={kw.styl_zycia.dieta} onChange={(e) => kwUpdate('styl_zycia', 'dieta', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
+                  </Field>
+                </Row2>
+              </KWSectionBody>
+            )}
+          </KWSection>
+
           <Buttons>
             <BtnCancel type="button" onClick={onClose}>Anuluj</BtnCancel>
             <BtnSubmit type="submit" disabled={loading}>
@@ -700,4 +1054,81 @@ const ACOption = styled.div`
     background: #e8f4f8;
     color: #2387B6;
   }
+`;
+
+/* ─── Karta Wywiadu section styled components ─── */
+
+const KWDivider = styled.h3`
+  font-size: 1.1rem;
+  color: #1a1a2e;
+  border-top: 3px solid #2387B6;
+  padding-top: 12px;
+  margin: 1rem 0 0.25rem;
+`;
+
+const KWSection = styled.div`
+  background: #f8f9fa;
+  border-radius: 10px;
+  overflow: hidden;
+`;
+
+const KWSectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1a1a2e;
+  &:hover { background: #eef1f4; }
+`;
+
+const KWChevron = styled.span`
+  font-size: 0.7rem;
+  color: #888;
+  transition: transform 0.2s;
+  transform: rotate(${(p) => (p.$open ? '90deg' : '0deg')});
+`;
+
+const KWSectionBody = styled.div`
+  padding: 4px 14px 14px;
+  border-top: 1px solid #e9ecef;
+`;
+
+const KWSmallTitle = styled.h4`
+  font-size: 0.82rem;
+  color: #555;
+  margin: 12px 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const KWQuestionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+  span { font-size: 0.9rem; font-weight: 500; color: #333; }
+`;
+
+const KWTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 4px;
+  th { text-align: left; font-size: 0.75rem; color: #777; text-transform: uppercase; padding: 5px 4px; border-bottom: 2px solid #e9ecef; }
+  td { padding: 3px 4px;
+    input, select { width: 100%; padding: 5px 7px; border: 1.5px solid #e0e0e0; border-radius: 6px; font-size: 0.83rem; font-family: inherit; &:focus { outline: none; border-color: #2387B6; } }
+  }
+`;
+
+const KWRemoveBtn = styled.button`
+  background: none; border: none; color: #ef4444; font-size: 1.2rem; cursor: pointer; padding: 0 5px; line-height: 1;
+  &:hover { color: #dc2626; }
+`;
+
+const KWAddBtn = styled.button`
+  background: none; border: 1px dashed #2387B6; color: #2387B6; border-radius: 6px; padding: 3px 12px; font-size: 0.8rem; cursor: pointer; margin-top: 4px;
+  &:hover { background: #f0f7fb; }
 `;
