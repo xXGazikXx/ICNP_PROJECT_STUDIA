@@ -226,7 +226,7 @@ const Header = styled.div`
 `;
 
 const AddBtn = styled.button`
-  background: #0d9488;
+  background: #2387B6;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -236,7 +236,7 @@ const AddBtn = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #0b7c72;
+    background: #1b6d94;
   }
 `;
 
@@ -286,7 +286,7 @@ const Field = styled.div`
 
     &:focus {
       outline: none;
-      border-color: #0d9488;
+      border-color: #2387B6;
     }
   }
 `;
@@ -294,7 +294,7 @@ const Field = styled.div`
 const SubmitBtn = styled.button`
   align-self: flex-end;
   padding: 10px 24px;
-  background: #0d9488;
+  background: #2387B6;
   color: white;
   border: none;
   border-radius: 8px;
@@ -303,7 +303,7 @@ const SubmitBtn = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #0b7c72;
+    background: #1b6d94;
   }
 `;
 

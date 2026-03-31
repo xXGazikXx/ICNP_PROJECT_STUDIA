@@ -48,7 +48,7 @@ const Nav = styled.nav`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #0d9488;
+  background: #2387B6;
   padding: 0 1.5rem;
   height: 56px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);

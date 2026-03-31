@@ -19,7 +19,8 @@ const WOJEWODZTWA = [
 const STAN_CYWILNY = ['kawaler', 'panna', 'mężatka', 'mąż', 'wdowa', 'wdowiec'];
 const WYKSZTALCENIE = ['podstawowe', 'gimnazjalne', 'zasadnicze zawodowe', 'średnie', 'wyższe'];
 
-export default function AddPatientModal({ onClose, onAdded }) {
+export default function AddPatientModal({ onClose, onAdded, editData }) {
+  const isEdit = !!editData;
   const [form, setForm] = useState({
     imie: '', nazwisko: '', nazwisko_panienskie: '', plec: '',
     pesel: '', wiek: '', data_urodzenia: '',
@@ -30,6 +31,9 @@ export default function AddPatientModal({ onClose, onAdded }) {
     stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
     opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '',
     lokalizacja: '',
+    ...(editData ? Object.fromEntries(
+      Object.entries(editData).filter(([_, v]) => v != null).map(([k, v]) => [k, String(v)])
+    ) : {}),
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,6 +41,15 @@ export default function AddPatientModal({ onClose, onAdded }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    if (name === 'data_urodzenia' && value) {
+      const age = Math.floor((Date.now() - new Date(value)) / (365.25 * 24 * 60 * 60 * 1000));
+      setForm((prev) => ({
+        ...prev,
+        data_urodzenia: value,
+        wiek: age >= 0 ? String(age) : '',
+      }));
+    }
 
     if (name === 'pesel' && value.length === 11) {
       const year = parseInt(value.substring(0, 2), 10);
@@ -72,9 +85,18 @@ export default function AddPatientModal({ onClose, onAdded }) {
       Object.keys(payload).forEach((k) => {
         if (payload[k] === '') delete payload[k];
       });
+      delete payload.id;
+      delete payload.autor;
+      delete payload.created_by;
+      delete payload.created_at;
+      delete payload.updated_at;
 
-      const res = await api.post('/patients', payload);
-      onAdded(res.data);
+      if (isEdit) {
+        await api.put(`/patients/${editData.id}`, payload);
+      } else {
+        await api.post('/patients', payload);
+      }
+      onAdded();
       onClose();
     } catch (err) {
       const msg =
@@ -90,7 +112,7 @@ export default function AddPatientModal({ onClose, onAdded }) {
   return (
     <Overlay onClick={onClose}>
       <Modal onClick={(e) => e.stopPropagation()}>
-        <h2>Karta wywiadu — Dodaj pacjenta</h2>
+        <h2>{isEdit ? 'Edytuj pacjenta' : 'Karta wywiadu — Dodaj pacjenta'}</h2>
 
         {error && <Error>{error}</Error>}
 
@@ -134,12 +156,12 @@ export default function AddPatientModal({ onClose, onAdded }) {
               <input name="pesel" value={form.pesel} onChange={handleChange} maxLength={11} pattern="[0-9]{11}" title="PESEL musi mieć 11 cyfr" required />
             </Field>
             <Field>
-              <label>Wiek</label>
-              <input name="wiek" value={form.wiek} onChange={handleChange} type="number" min="0" max="150" />
-            </Field>
-            <Field>
               <label>Data urodzenia</label>
               <input name="data_urodzenia" value={form.data_urodzenia} onChange={handleChange} type="date" />
+            </Field>
+            <Field>
+              <label>Wiek</label>
+              <input name="wiek" value={form.wiek} readOnly style={{ background: '#f5f5f5' }} />
             </Field>
           </Row3>
 
@@ -263,7 +285,7 @@ export default function AddPatientModal({ onClose, onAdded }) {
           <Buttons>
             <BtnCancel type="button" onClick={onClose}>Anuluj</BtnCancel>
             <BtnSubmit type="submit" disabled={loading}>
-              {loading ? 'Dodawanie...' : 'Dodaj pacjenta'}
+              {loading ? (isEdit ? 'Zapisywanie...' : 'Dodawanie...') : (isEdit ? 'Zapisz zmiany' : 'Dodaj pacjenta')}
             </BtnSubmit>
           </Buttons>
         </Form>
@@ -286,10 +308,13 @@ const Modal = styled.div`
   background: white;
   border-radius: 12px;
   padding: 2rem;
-  width: 750px;
+  width: 900px;
   max-width: 95vw;
   max-height: 90vh;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { display: none; }
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 
   h2 {
@@ -316,8 +341,8 @@ const Form = styled.form`
 
 const SectionTitle = styled.h3`
   font-size: 0.95rem;
-  color: #0d9488;
-  border-bottom: 2px solid #0d9488;
+  color: #2387B6;
+  border-bottom: 2px solid #2387B6;
   padding-bottom: 4px;
   margin: 0.5rem 0 0;
 `;
@@ -382,7 +407,7 @@ const Field = styled.div`
 
     &:focus {
       outline: none;
-      border-color: #0d9488;
+      border-color: #2387B6;
     }
   }
 `;
@@ -412,7 +437,7 @@ const BtnSubmit = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background: #0d9488;
+  background: #2387B6;
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
@@ -420,7 +445,7 @@ const BtnSubmit = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #0f766e;
+    background: #1b6d94;
   }
 
   &:disabled {

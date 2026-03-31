@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import api from '../api/axios';
 import PatientList from '../components/PatientList';
 import AddPatientModal from '../components/AddPatientModal';
+import PatientSidebar from '../components/PatientSidebar';
 
 const TABS = [
   { key: 'aktualny', label: 'Pacjenci aktualni' },
@@ -14,6 +15,9 @@ export default function DashboardPage() {
   const [patients, setPatients] = useState([]);
   const [activeTab, setActiveTab] = useState('aktualny');
   const [showAdd, setShowAdd] = useState(false);
+  const [editPatient, setEditPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [activeSection, setActiveSection] = useState('lista');
   const [loading, setLoading] = useState(true);
 
   const fetchPatients = async () => {
@@ -38,6 +42,7 @@ export default function DashboardPage() {
     try {
       await api.put(`/patients/${id}`, { status: newStatus });
       fetchPatients();
+      if (selectedPatient?.id === id) setSelectedPatient(null);
     } catch (err) {
       console.error('Błąd zmiany statusu:', err);
     }
@@ -47,46 +52,86 @@ export default function DashboardPage() {
     fetchPatients();
   };
 
+  const handleSelect = (id) => {
+    const patient = patients.find((p) => p.id === id);
+    setSelectedPatient(patient || null);
+    setActiveSection('wywiad');
+  };
+
+  const handleEdit = (patient) => {
+    setEditPatient(patient);
+  };
+
   return (
-    <Container>
-      <Header>
-        <h1>Lista Pacjentów</h1>
-        <AddBtn onClick={() => setShowAdd(true)}>+ Dodaj pacjenta</AddBtn>
-      </Header>
-
-      <Tabs>
-        {TABS.map((tab) => (
-          <Tab
-            key={tab.key}
-            $active={activeTab === tab.key}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </Tab>
-        ))}
-      </Tabs>
-
-      {loading ? (
-        <Loading>Ładowanie...</Loading>
-      ) : (
-        <PatientList
-          patients={patients}
-          onStatusChange={handleStatusChange}
+    <Layout>
+      {selectedPatient && (
+        <PatientSidebar
+          patient={selectedPatient}
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          onDeselect={() => setSelectedPatient(null)}
         />
       )}
+      <Container $hasSidebar={!!selectedPatient}>
+        <Header>
+          <h1>Lista Pacjentów</h1>
+          <AddBtn onClick={() => setShowAdd(true)}>+ Dodaj pacjenta</AddBtn>
+        </Header>
 
-      {showAdd && (
-        <AddPatientModal
-          onClose={() => setShowAdd(false)}
-          onAdded={handlePatientAdded}
-        />
-      )}
-    </Container>
+        <Tabs>
+          {TABS.map((tab) => (
+            <Tab
+              key={tab.key}
+              $active={activeTab === tab.key}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </Tab>
+          ))}
+        </Tabs>
+
+        {loading ? (
+          <Loading>Ładowanie...</Loading>
+        ) : (
+          <PatientList
+            patients={patients}
+            onStatusChange={handleStatusChange}
+            onSelect={handleSelect}
+            onEdit={handleEdit}
+            selectedId={selectedPatient?.id}
+          />
+        )}
+
+        {showAdd && (
+          <AddPatientModal
+            onClose={() => setShowAdd(false)}
+            onAdded={handlePatientAdded}
+          />
+        )}
+
+        {editPatient && (
+          <AddPatientModal
+            onClose={() => setEditPatient(null)}
+            onAdded={() => {
+              setEditPatient(null);
+              fetchPatients();
+            }}
+            editData={editPatient}
+          />
+        )}
+      </Container>
+    </Layout>
   );
 }
 
+const Layout = styled.div`
+  display: flex;
+  min-height: calc(100vh - 56px);
+`;
+
 const Container = styled.div`
-  max-width: 1200px;
+  flex: 1;
+  max-width: ${(p) => (p.$hasSidebar ? '100%' : '1200px')};
   margin: 0 auto;
   padding: 2rem;
 `;
@@ -104,7 +149,7 @@ const Header = styled.div`
 `;
 
 const AddBtn = styled.button`
-  background: #0d9488;
+  background: #2387B6;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -114,7 +159,7 @@ const AddBtn = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #0b7c72;
+    background: #1b6d94;
   }
 `;
 
@@ -131,14 +176,14 @@ const Tab = styled.button`
   flex: 1;
   padding: 12px 20px;
   border: none;
-  background: ${(p) => (p.$active ? '#0d9488' : 'transparent')};
+  background: ${(p) => (p.$active ? '#2387B6' : 'transparent')};
   color: ${(p) => (p.$active ? 'white' : '#555')};
   font-size: 0.9rem;
   font-weight: ${(p) => (p.$active ? '600' : '400')};
   transition: all 0.2s;
 
   &:hover {
-    background: ${(p) => (p.$active ? '#0d9488' : '#d1d5db')};
+    background: ${(p) => (p.$active ? '#2387B6' : '#d1d5db')};
   }
 `;
 
