@@ -5,6 +5,7 @@ import api from '../api/axios';
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [prowadzacyList, setProwadzacyList] = useState([]);
   const [form, setForm] = useState({
     username: '',
@@ -35,30 +36,64 @@ export default function UsersPage() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const resetForm = () => {
+    setForm({
+      username: '',
+      password: '',
+      imie: '',
+      nazwisko: '',
+      email: '',
+      role: 'student',
+      prowadzacy_id: '',
+    });
+    setEditingUser(null);
+    setShowForm(false);
+    setError('');
+  };
+
+  const handleEdit = (user) => {
+    setEditingUser(user);
+    setForm({
+      username: user.username,
+      password: '',
+      imie: user.imie,
+      nazwisko: user.nazwisko,
+      email: user.email || '',
+      role: user.role,
+      prowadzacy_id: user.prowadzacy_id || '',
+    });
+    setShowForm(true);
+    setError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      const payload = { ...form };
-      if (!payload.prowadzacy_id) delete payload.prowadzacy_id;
-      if (!payload.email) delete payload.email;
-      await api.post('/users', payload);
-      setShowForm(false);
-      setForm({
-        username: '',
-        password: '',
-        imie: '',
-        nazwisko: '',
-        email: '',
-        role: 'student',
-        prowadzacy_id: '',
-      });
+      if (editingUser) {
+        const payload = {
+          username: form.username,
+          imie: form.imie,
+          nazwisko: form.nazwisko,
+          email: form.email || null,
+          role: form.role,
+          prowadzacy_id: form.prowadzacy_id || null,
+        };
+        if (form.password) payload.password = form.password;
+        await api.put(`/users/${editingUser.id}`, payload);
+      } else {
+        const payload = { ...form };
+        if (!payload.prowadzacy_id) delete payload.prowadzacy_id;
+        if (!payload.email) delete payload.email;
+        await api.post('/users', payload);
+      }
+      resetForm();
       fetchUsers();
     } catch (err) {
       setError(
         err.response?.data?.errors?.[0]?.msg ||
           err.response?.data?.message ||
-          'Błąd tworzenia użytkownika'
+          'Błąd zapisu użytkownika'
       );
     }
   };
@@ -83,7 +118,7 @@ export default function UsersPage() {
     <Container>
       <Header>
         <h1>Zarządzanie użytkownikami</h1>
-        <AddBtn onClick={() => setShowForm(!showForm)}>
+        <AddBtn onClick={() => { if (showForm) resetForm(); else setShowForm(true); }}>
           {showForm ? 'Anuluj' : '+ Dodaj użytkownika'}
         </AddBtn>
       </Header>
@@ -102,14 +137,14 @@ export default function UsersPage() {
               />
             </Field>
             <Field>
-              <label>Hasło *</label>
+              <label>{editingUser ? 'Nowe hasło (opcjonalne)' : 'Hasło *'}</label>
               <input
                 name="password"
                 type="password"
                 value={form.password}
                 onChange={handleChange}
-                required
-                minLength={6}
+                {...(editingUser ? {} : { required: true, minLength: 6 })}
+                placeholder={editingUser ? 'Zostaw puste, aby nie zmieniać' : ''}
               />
             </Field>
           </Row>
@@ -169,7 +204,7 @@ export default function UsersPage() {
               </select>
             </Field>
           )}
-          <SubmitBtn type="submit">Utwórz użytkownika</SubmitBtn>
+          <SubmitBtn type="submit">{editingUser ? 'Zapisz zmiany' : 'Utwórz użytkownika'}</SubmitBtn>
         </FormCard>
       )}
 
@@ -197,7 +232,10 @@ export default function UsersPage() {
                   : '—'}
               </td>
               <td>
-                <DeleteBtn onClick={() => handleDelete(u.id)}>Usuń</DeleteBtn>
+                <ActionRow>
+                  <EditBtn onClick={() => handleEdit(u)}>Edytuj</EditBtn>
+                  <DeleteBtn onClick={() => handleDelete(u.id)}>Usuń</DeleteBtn>
+                </ActionRow>
               </td>
             </tr>
           ))}
@@ -345,10 +383,32 @@ const DeleteBtn = styled.button`
   background: white;
   color: #e74c3c;
   font-size: 0.82rem;
+  cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
     background: #e74c3c;
+    color: white;
+  }
+`;
+
+const ActionRow = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const EditBtn = styled.button`
+  padding: 6px 12px;
+  border: 1px solid #2387B6;
+  border-radius: 6px;
+  background: white;
+  color: #2387B6;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #2387B6;
     color: white;
   }
 `;
