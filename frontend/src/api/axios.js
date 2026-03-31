@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+// W dev proxy Vite przekieruje /api → backend:5000
+// W produkcji (GitHub Pages) VITE_API_URL wskazuje na Railway/Render
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
