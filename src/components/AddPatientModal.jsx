@@ -1059,57 +1059,53 @@ const ACOption = styled.div`
 /* ─── Karta Wywiadu section styled components ─── */
 
 const KWDivider = styled.h3`
-  font-size: 1.1rem;
-  color: #1a1a2e;
-  border-top: 3px solid #2387B6;
-  padding-top: 12px;
-  margin: 1rem 0 0.25rem;
+  font-size: 0.95rem;
+  color: #2387B6;
+  border-bottom: 2px solid #2387B6;
+  padding-bottom: 4px;
+  margin: 0.5rem 0 0;
 `;
 
-const KWSection = styled.div`
-  background: #f8f9fa;
-  border-radius: 10px;
-  overflow: hidden;
-`;
+const KWSection = styled.div``;
 
 const KWSectionHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
+  font-size: 0.88rem;
   font-weight: 600;
-  font-size: 0.95rem;
-  color: #1a1a2e;
-  &:hover { background: #eef1f4; }
+  color: #2387B6;
+  border-bottom: 1.5px solid #d0e8f5;
+  padding-bottom: 4px;
+  margin: 0.5rem 0 0;
+  &:hover { color: #1b6d94; border-color: #1b6d94; }
 `;
 
 const KWChevron = styled.span`
-  font-size: 0.7rem;
-  color: #888;
+  font-size: 0.65rem;
+  color: #2387B6;
   transition: transform 0.2s;
   transform: rotate(${(p) => (p.$open ? '90deg' : '0deg')});
 `;
 
 const KWSectionBody = styled.div`
-  padding: 4px 14px 14px;
-  border-top: 1px solid #e9ecef;
+  padding: 6px 0 4px;
 `;
 
 const KWSmallTitle = styled.h4`
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: #555;
-  margin: 12px 0 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin: 10px 0 4px;
 `;
 
 const KWQuestionRow = styled.div`
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 6px 0;
+  padding: 4px 0;
   span { font-size: 0.9rem; font-weight: 500; color: #333; }
 `;
 
