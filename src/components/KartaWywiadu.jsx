@@ -324,7 +324,6 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
           <label>Rozpoznanie główne</label>
           <textarea rows={3} value={kw.choroby.rozpoznanie_glowne} onChange={(e) => kwUpdate('choroby', 'rozpoznanie_glowne', e.target.value)} />
         </Field>
-        <SmallTitle>Choroby przewlekłe</SmallTitle>
         <QuestionRow>
           <span>Choroby przewlekłe</span>
           <ToggleCheckbox checked={kw.choroby.przewlekle_enabled} onChange={() => kwUpdate('choroby', 'przewlekle_enabled', !kw.choroby.przewlekle_enabled)} label={kw.choroby.przewlekle_enabled ? 'Tak' : 'Nie'} />

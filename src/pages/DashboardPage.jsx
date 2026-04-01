@@ -8,6 +8,7 @@ import AddPatientModal from '../components/AddPatientModal';
 import PatientSidebar from '../components/PatientSidebar';
 import Loader from '../components/Loader';
 import KartaWywiadu from '../components/KartaWywiadu';
+import PlanOpieki from '../components/PlanOpieki';
 
 const TABS = [
   { key: 'aktualny', label: 'Pacjenci aktualni' },
@@ -94,7 +95,7 @@ export default function DashboardPage() {
       case 'oceny':
         return <SectionPlaceholder>Ocena układów — w budowie</SectionPlaceholder>;
       case 'diagnozy':
-        return <SectionPlaceholder>Diagnozy i plany — w budowie</SectionPlaceholder>;
+        return <PlanOpieki patient={selectedPatient} />;
       case 'zlecenia':
         return <SectionPlaceholder>Zlecenia i interwencje — w budowie</SectionPlaceholder>;
       case 'analiza':

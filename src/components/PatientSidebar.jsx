@@ -3,7 +3,7 @@ import styled from 'styled-components';
 const SIDEBAR_ITEMS = [
   { key: 'wywiad', icon: '📝', label: 'Karta wywiadu' },
   { key: 'oceny', icon: '🔍', label: 'Ocena układów' },
-  { key: 'diagnozy', icon: '🩺', label: 'Diagnozy i plany' },
+  { key: 'diagnozy', icon: '🩺', label: 'Plan Opieki' },
   { key: 'zlecenia', icon: '💊', label: 'Zlecenia i interwencje' },
   { key: 'analiza', icon: '📊', label: 'Analiza danych' },
   { key: 'raport', icon: '📄', label: 'Raport pielęgniarski' },
