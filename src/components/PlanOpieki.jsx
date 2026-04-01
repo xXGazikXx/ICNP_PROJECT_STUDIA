@@ -17,12 +17,6 @@ function icnpCode(name) {
   return '10' + String(Math.abs(h) % 1000000).padStart(6, '0');
 }
 
-function formatWithCode(name, list) {
-  const valid = list.some((t) => t.toLowerCase() === (name || '').toLowerCase());
-  if (!valid) return name;
-  return `${name} [${icnpCode(name)}]`;
-}
-
 function generateSlots(int) {
   if (!int.data_rozpoczecia || !int.godzina || !int.interwal || !int.ilosc_powtorzen) return [];
   const [y, m, d] = int.data_rozpoczecia.split('-').map(Number);
@@ -67,6 +61,12 @@ const PrimaryBtn = styled.button`
   &:hover { background: #1d4ed8; }
   &:disabled { background: #93c5fd; cursor: not-allowed; }
 `;
+const DangerBtn = styled.button`
+  background: none; border: 1.5px solid #fca5a5; color: #dc2626;
+  border-radius: 8px; padding: 10px 20px; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; margin-right: auto;
+  &:hover { background: #fee2e2; }
+`;
 const EmptyState = styled.div`
   text-align: center; padding: 60px 20px; color: #9ca3af; font-size: 1rem;
 `;
@@ -79,7 +79,7 @@ const TableWrap = styled.div`
 `;
 
 const MainTable = styled.table`
-  width: 100%; border-collapse: collapse;
+  width: 100%; border-collapse: collapse; table-layout: fixed;
 
   th {
     background: #f8f9fa; padding: 14px 18px; text-align: center;
@@ -90,7 +90,13 @@ const MainTable = styled.table`
 
   > tbody > tr > td {
     padding: 0; border-bottom: 2px solid #e9ecef;
-    vertical-align: top; text-align: center;
+    text-align: center;
+  }
+  > tbody > tr > td:nth-child(-n+2) {
+    vertical-align: middle;
+  }
+  > tbody > tr > td:nth-child(3) {
+    vertical-align: top; overflow: hidden;
   }
 `;
 
@@ -106,25 +112,6 @@ const CellText = styled.div`
 
 const IcnpCode = styled.span`
   color: #6b7280; font-size: 0.78rem; font-weight: 500;
-`;
-
-/* ─── Action bar (edit/delete on click) ─────────────────────────────── */
-
-const ActionBar = styled.div`
-  display: flex; gap: 8px; justify-content: center; margin-top: 10px;
-  animation: fadeIn 0.15s ease;
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-`;
-
-const ActionBtn = styled.button`
-  padding: 5px 14px; border-radius: 6px; font-size: 0.78rem;
-  font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s;
-  background: ${({ $danger }) => ($danger ? '#fee2e2' : '#eff6ff')};
-  border: 1.5px solid ${({ $danger }) => ($danger ? '#fca5a5' : '#93c5fd')};
-  color: ${({ $danger }) => ($danger ? '#dc2626' : '#2563eb')};
-  &:hover {
-    background: ${({ $danger }) => ($danger ? '#fecaca' : '#dbeafe')};
-  }
 `;
 
 /* ─── Interwencje inside cell ──────────────────────────────────────────── */
@@ -145,7 +132,7 @@ const IntRow = styled.div`
 `;
 
 const IntName = styled.div`
-  min-width: 220px; max-width: 280px; padding: 10px 14px;
+  min-width: 180px; max-width: 220px; width: 200px; padding: 10px 14px;
   display: flex; align-items: center; justify-content: center;
   font-size: 0.84rem; color: #111827; text-align: center;
   border-right: 1px solid #f0f0f0; flex-shrink: 0;
@@ -156,13 +143,21 @@ const IntSubLabel = styled.span`
 `;
 
 const SlotsWrap = styled.div`
-  display: flex; flex: 1; overflow-x: auto;
+  display: flex; flex: 1; min-width: 0; overflow-x: auto;
+
+  /* thin scrollbar */
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #c4c4c4; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+  scrollbar-width: thin;
+  scrollbar-color: #c4c4c4 #f1f1f1;
 `;
 
 const SlotCol = styled.div`
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; min-width: 90px; padding: 6px 8px;
-  border-right: 1px solid #f5f5f5;
+  border-right: 1px solid #f5f5f5; flex-shrink: 0;
 `;
 
 const SlotDate = styled.div`
@@ -184,9 +179,10 @@ const NoSlots = styled.div`
 `;
 
 const AddIntBtn = styled.button`
-  display: block; width: 100%; padding: 12px; border: 2px dashed #93c5fd;
-  background: #f8faff; color: #2563eb; font-size: 0.85rem; font-weight: 600;
-  cursor: pointer; transition: background 0.15s; text-align: center;
+  display: block; margin: 8px auto; padding: 6px 24px;
+  border: 1.5px dashed #93c5fd; border-radius: 6px;
+  background: #f8faff; color: #2563eb; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
   &:hover { background: #eff6ff; }
 `;
 
@@ -343,13 +339,9 @@ export default function PlanOpieki({ patient }) {
   const [intForm, setIntForm] = useState(EMPTY_INT);
   const [intSaving, setIntSaving] = useState(false);
 
-  // selection for action bar
-  const [selectedEntry, setSelectedEntry] = useState(null);
-  const [selectedInt, setSelectedInt] = useState(null); // { entryId, idx }
-
   // confirm delete
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [confirmDeleteInt, setConfirmDeleteInt] = useState(null); // { entryId, idx }
+  const [confirmDeleteInt, setConfirmDeleteInt] = useState(null);
 
   const fetchEntries = useCallback(async () => {
     if (!patient?.id) return;
@@ -365,13 +357,6 @@ export default function PlanOpieki({ patient }) {
 
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
 
-  // click outside closes action bars
-  useEffect(() => {
-    const handler = () => { setSelectedEntry(null); setSelectedInt(null); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
   /* ─── Entry CRUD ─────────────────────────────────────────────────────── */
 
   const openAddEntry = () => { setEditEntryId(null); setForm(EMPTY_FORM); setShowAddModal(true); };
@@ -379,7 +364,6 @@ export default function PlanOpieki({ patient }) {
     setEditEntryId(entry.id);
     setForm({ problem: entry.problem || '', diagnoza: entry.diagnoza || '' });
     setShowAddModal(true);
-    setSelectedEntry(null);
   };
   const closeEntryModal = () => { setShowAddModal(false); setForm(EMPTY_FORM); setEditEntryId(null); };
 
@@ -405,7 +389,7 @@ export default function PlanOpieki({ patient }) {
     try {
       await api.delete(`/plan-opieki/${id}`);
       notify('Wpis usunięty', 'success');
-      setConfirmDelete(null); setSelectedEntry(null); fetchEntries();
+      setConfirmDelete(null); closeEntryModal(); fetchEntries();
     } catch (err) { console.error(err); notify('Błąd usuwania', 'error'); }
   };
 
@@ -428,7 +412,6 @@ export default function PlanOpieki({ patient }) {
       ilosc_powtorzen: existing.ilosc_powtorzen || '',
       wykonane: existing.wykonane || [],
     });
-    setSelectedInt(null);
   };
   const closeIntModal = () => { setIntModal(null); setIntForm(EMPTY_INT); };
 
@@ -439,7 +422,6 @@ export default function PlanOpieki({ patient }) {
       const entry = entries.find((e) => e.id === intModal.entryId);
       const current = Array.isArray(entry?.interwencje) ? [...entry.interwencje] : [];
 
-      // ensure wykonane array matches slot count
       const count = parseInt(intForm.ilosc_powtorzen, 10) || 0;
       const wykonane = Array.isArray(intForm.wykonane) ? intForm.wykonane : [];
       const padded = Array.from({ length: count }, (_, i) => wykonane[i] || false);
@@ -464,7 +446,7 @@ export default function PlanOpieki({ patient }) {
       current.splice(idx, 1);
       await api.put(`/plan-opieki/${entryId}`, { interwencje: current });
       notify('Interwencja usunięta', 'success');
-      setConfirmDeleteInt(null); setSelectedInt(null); fetchEntries();
+      setConfirmDeleteInt(null); closeIntModal(); fetchEntries();
     } catch (err) { console.error(err); notify('Błąd usuwania', 'error'); }
   };
 
@@ -512,43 +494,32 @@ export default function PlanOpieki({ patient }) {
           <MainTable>
             <thead>
               <tr>
-                <th style={{ width: '22%' }}>Problem</th>
-                <th style={{ width: '22%' }}>Diagnoza</th>
+                <th style={{ width: '18%' }}>Problem</th>
+                <th style={{ width: '18%' }}>Diagnoza</th>
                 <th>Interwencje</th>
               </tr>
             </thead>
             <tbody>
               {entries.map((entry) => {
                 const ints = Array.isArray(entry.interwencje) ? entry.interwencje : [];
-                const isEntrySelected = selectedEntry === entry.id;
 
                 return (
                   <tr key={entry.id}>
-                    {/* Problem */}
+                    {/* Problem — click opens edit */}
                     <td>
-                      <CellContent
-                        onMouseDown={(e) => { e.stopPropagation(); setSelectedEntry(isEntrySelected ? null : entry.id); setSelectedInt(null); }}
-                      >
+                      <CellContent onClick={() => openEditEntry(entry)}>
                         <CellText>
                           {entry.problem}
                           {ICNP_DIAGNOZY.some((t) => t.toLowerCase() === (entry.problem || '').toLowerCase()) && (
                             <><br /><IcnpCode>[{icnpCode(entry.problem)}]</IcnpCode></>
                           )}
                         </CellText>
-                        {isEntrySelected && (
-                          <ActionBar>
-                            <ActionBtn onMouseDown={(e) => { e.stopPropagation(); openEditEntry(entry); }}>Edytuj</ActionBtn>
-                            <ActionBtn $danger onMouseDown={(e) => { e.stopPropagation(); setConfirmDelete(entry.id); setSelectedEntry(null); }}>Usuń</ActionBtn>
-                          </ActionBar>
-                        )}
                       </CellContent>
                     </td>
 
-                    {/* Diagnoza */}
+                    {/* Diagnoza — click opens edit */}
                     <td>
-                      <CellContent
-                        onMouseDown={(e) => { e.stopPropagation(); setSelectedEntry(isEntrySelected ? null : entry.id); setSelectedInt(null); }}
-                      >
+                      <CellContent onClick={() => openEditEntry(entry)}>
                         <CellText>
                           {entry.diagnoza}
                           {ICNP_DIAGNOZY.some((t) => t.toLowerCase() === (entry.diagnoza || '').toLowerCase()) && (
@@ -566,18 +537,11 @@ export default function PlanOpieki({ patient }) {
                           const intValid = ICNP_INTERWENCJE.some((t) => t.toLowerCase() === (name || '').toLowerCase());
                           const slots = typeof int === 'object' ? generateSlots(int) : [];
                           const wykonane = (typeof int === 'object' && Array.isArray(int.wykonane)) ? int.wykonane : [];
-                          const isIntSelected = selectedInt?.entryId === entry.id && selectedInt?.idx === i;
 
                           return (
-                            <IntBlock key={i}>
+                            <IntBlock key={i} onClick={() => openEditInt(entry.id, i)}>
                               <IntRow>
-                                <IntName
-                                  onMouseDown={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedInt(isIntSelected ? null : { entryId: entry.id, idx: i });
-                                    setSelectedEntry(null);
-                                  }}
-                                >
+                                <IntName>
                                   <div>
                                     {name}
                                     {intValid && <IntSubLabel>[{icnpCode(name)}]</IntSubLabel>}
@@ -585,7 +549,7 @@ export default function PlanOpieki({ patient }) {
                                 </IntName>
 
                                 {slots.length > 0 ? (
-                                  <SlotsWrap>
+                                  <SlotsWrap onClick={(e) => e.stopPropagation()}>
                                     {slots.map((slot, si) => (
                                       <SlotCol key={si}>
                                         <SlotDate>{slot.date}</SlotDate>
@@ -593,7 +557,6 @@ export default function PlanOpieki({ patient }) {
                                         <SlotCheck
                                           checked={!!wykonane[si]}
                                           onChange={() => toggleSlot(entry.id, i, si)}
-                                          onMouseDown={(e) => e.stopPropagation()}
                                         />
                                       </SlotCol>
                                     ))}
@@ -602,18 +565,11 @@ export default function PlanOpieki({ patient }) {
                                   <NoSlots>brak harmonogramu</NoSlots>
                                 )}
                               </IntRow>
-
-                              {isIntSelected && (
-                                <ActionBar style={{ padding: '6px 14px 10px', justifyContent: 'center' }}>
-                                  <ActionBtn onMouseDown={(e) => { e.stopPropagation(); openEditInt(entry.id, i); }}>Edytuj</ActionBtn>
-                                  <ActionBtn $danger onMouseDown={(e) => { e.stopPropagation(); setConfirmDeleteInt({ entryId: entry.id, idx: i }); setSelectedInt(null); }}>Usuń</ActionBtn>
-                                </ActionBar>
-                              )}
                             </IntBlock>
                           );
                         })}
 
-                        <AddIntBtn onMouseDown={(e) => { e.stopPropagation(); openAddInt(entry.id); }}>
+                        <AddIntBtn onClick={(e) => { e.stopPropagation(); openAddInt(entry.id); }}>
                           + Dodaj interwencję
                         </AddIntBtn>
                       </IntSection>
@@ -692,6 +648,9 @@ export default function PlanOpieki({ patient }) {
               </FormGroup>
             </ModalBody>
             <ModalFooter>
+              {editEntryId && (
+                <DangerBtn onClick={() => setConfirmDelete(editEntryId)}>Usuń wpis</DangerBtn>
+              )}
               <CancelBtn onClick={closeEntryModal}>Anuluj</CancelBtn>
               <PrimaryBtn onClick={handleSaveEntry} disabled={saving}>
                 {saving ? 'Zapisywanie…' : editEntryId ? 'Zapisz zmiany' : 'Dodaj do planu'}
@@ -746,6 +705,11 @@ export default function PlanOpieki({ patient }) {
               </FormRow>
             </ModalBody>
             <ModalFooter>
+              {intModal.editIdx !== undefined && (
+                <DangerBtn onClick={() => setConfirmDeleteInt({ entryId: intModal.entryId, idx: intModal.editIdx })}>
+                  Usuń interwencję
+                </DangerBtn>
+              )}
               <CancelBtn onClick={closeIntModal}>Anuluj</CancelBtn>
               <PrimaryBtn onClick={handleSaveInt} disabled={intSaving}>
                 {intSaving ? 'Zapisywanie…' : intModal.editIdx !== undefined ? 'Zapisz zmiany' : 'Dodaj interwencję'}
