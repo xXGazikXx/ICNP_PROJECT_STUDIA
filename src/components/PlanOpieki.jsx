@@ -283,20 +283,136 @@ const AcHint = styled.div`
   margin-top: 4px; font-size: 0.76rem;
   color: ${({ $valid }) => ($valid ? '#16a34a' : '#d97706')}; font-weight: 500;
 `;
+const AcAiTag = styled.span`
+  display: inline-block; background: #dbeafe; color: #1d4ed8;
+  font-size: 0.65rem; font-weight: 700; border-radius: 4px;
+  padding: 1px 5px; margin-right: 6px; vertical-align: middle;
+`;
+const AcLoading = styled.li`
+  padding: 10px 14px; font-size: 0.82rem; color: #9ca3af; font-style: italic; text-align: center;
+`;
+
+/* ─── AI Suggestion panel ───────────────────────────────────────────── */
+
+const AiPanel = styled.div`
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  border: 1.5px solid #93c5fd; border-radius: 12px; padding: 20px;
+  margin-bottom: 16px;
+`;
+const AiTitle = styled.div`
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  font-size: 0.95rem; font-weight: 700; color: #1e40af;
+`;
+const AiCard = styled.div`
+  background: var(--bg-card); border: 1.5px solid #e0e7ff;
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: border-color 0.2s;
+  &:last-of-type { margin-bottom: 0; }
+`;
+const AiCardBody = styled.div` flex: 1; min-width: 0; `;
+const AiCardLabel = styled.div`
+  font-size: 0.72rem; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; margin-bottom: 2px;
+`;
+const AiCardText = styled.div`
+  font-size: 0.88rem; color: var(--text-primary); font-weight: 500;
+`;
+const AiCardInts = styled.div`
+  margin-top: 4px; font-size: 0.78rem; color: var(--text-secondary);
+`;
+const AiActions = styled.div`
+  display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; padding-top: 2px;
+`;
+const AiYes = styled.button`
+  width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid #86efac;
+  background: #f0fdf4; color: #16a34a; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  &:hover { background: #dcfce7; }
+`;
+const AiNo = styled.button`
+  width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid #fca5a5;
+  background: #fef2f2; color: #dc2626; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  &:hover { background: #fee2e2; }
+`;
+const AiGenerateBtn = styled.button`
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff; border: none; border-radius: 8px;
+  padding: 10px 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+  &:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Autocomplete component
+   Fuzzy search helper
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function Autocomplete({ list, value, onChange, placeholder, required }) {
+const PL_SUFFIXES = [
+  'owego','owej','owym','owych','owe','owy','owa',
+  'yjnego','yjnej','yjnym','yjnych','yjne','yjny','yjna',
+  'nego','nej','nym','nych','ne','ny','na',
+  'eniu','eniu','ania','enie','anie',
+  'iem','iem','ach','ami','om',
+  'ów','ie','ej','ą','ę','i','y','a','e',
+];
+
+function polishStem(word) {
+  const w = word.toLowerCase();
+  if (w.length <= 3) return w;
+  for (const s of PL_SUFFIXES) {
+    if (w.length > s.length + 2 && w.endsWith(s)) return w.slice(0, -s.length);
+  }
+  return w;
+}
+
+function fuzzyMatch(query, terms) {
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+  const stem = polishStem(q);
+
+  const exact = [], startsWith = [], stemMatch = [], includes = [];
+  for (const t of terms) {
+    const tl = t.toLowerCase();
+    if (tl === q) { exact.push(t); continue; }
+    if (tl.startsWith(q)) { startsWith.push(t); continue; }
+
+    const words = tl.split(/\s+/);
+    const hasStem = words.some((w) => polishStem(w).startsWith(stem) || stem.startsWith(polishStem(w)));
+    if (hasStem) { stemMatch.push(t); continue; }
+
+    if (tl.includes(q)) { includes.push(t); }
+  }
+  return [...exact, ...startsWith, ...stemMatch, ...includes].slice(0, 30);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Autocomplete component  (fuzzy search + AI suggestions)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function Autocomplete({ list, value, onChange, placeholder, required, patientId, field }) {
   const [inputVal, setInputVal] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [aiTerms, setAiTerms] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const wrapRef = useRef(null);
+  const aiRequested = useRef(false);
 
   const filtered = inputVal.trim().length >= 1
-    ? list.filter((t) => t.toLowerCase().includes(inputVal.toLowerCase())).slice(0, 30) : [];
+    ? fuzzyMatch(inputVal, list)
+    : [];
   const isValid = list.some((t) => t.toLowerCase() === inputVal.trim().toLowerCase());
+
+  const allItems = inputVal.trim().length === 0
+    ? aiTerms.map((t) => ({ text: t, ai: true }))
+    : [
+        ...aiTerms.filter((t) => t.toLowerCase().includes(inputVal.toLowerCase())).map((t) => ({ text: t, ai: true })),
+        ...filtered.map((t) => ({ text: t, ai: false })),
+      ];
 
   useEffect(() => { setInputVal(value || ''); }, [value]);
   useEffect(() => {
@@ -305,26 +421,46 @@ function Autocomplete({ list, value, onChange, placeholder, required }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const fetchAiTerms = async () => {
+    if (!patientId || !field || aiRequested.current) return;
+    aiRequested.current = true;
+    setAiLoading(true);
+    try {
+      const res = await api.post('/ai/suggest-terms', { patient_id: patientId, field });
+      if (Array.isArray(res.data?.suggestions)) setAiTerms(res.data.suggestions);
+    } catch (err) { console.error('AI suggest-terms error', err); }
+    finally { setAiLoading(false); }
+  };
+
+  const handleFocus = () => {
+    setOpen(true);
+    if (inputVal.trim().length === 0 && aiTerms.length === 0) fetchAiTerms();
+  };
+
   const handleChange = (e) => { setInputVal(e.target.value); onChange(e.target.value); setOpen(true); setActiveIdx(-1); };
   const handleSelect = (t) => { setInputVal(t); onChange(t); setOpen(false); setActiveIdx(-1); };
   const handleKey = (e) => {
-    if (!open || !filtered.length) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, filtered.length - 1)); }
+    if (!open || !allItems.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, allItems.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, -1)); }
-    else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(filtered[activeIdx]); }
+    else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(allItems[activeIdx].text); }
     else if (e.key === 'Escape') setOpen(false);
   };
 
   return (
     <AcWrap ref={wrapRef}>
       <AcInput value={inputVal} onChange={handleChange}
-        onFocus={() => inputVal.length >= 1 && setOpen(true)}
+        onFocus={handleFocus}
         onKeyDown={handleKey} placeholder={placeholder} required={required}
         $invalid={inputVal.trim().length > 0 && !isValid} autoComplete="off" />
-      {open && filtered.length > 0 && (
+      {open && (allItems.length > 0 || aiLoading) && (
         <AcDropdown>
-          {filtered.map((t, i) => (
-            <AcItem key={t} data-active={i === activeIdx} onMouseDown={() => handleSelect(t)}>{t}</AcItem>
+          {aiLoading && <AcLoading>🤖 Ładowanie sugestii AI…</AcLoading>}
+          {allItems.map((item, i) => (
+            <AcItem key={`${item.ai ? 'ai-' : ''}${item.text}`} data-active={i === activeIdx}
+              onMouseDown={() => handleSelect(item.text)}>
+              {item.ai && <AcAiTag>🤖 AI</AcAiTag>}{item.text}
+            </AcItem>
           ))}
         </AcDropdown>
       )}
@@ -362,6 +498,11 @@ export default function PlanOpieki({ patient }) {
   // confirm delete
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeleteInt, setConfirmDeleteInt] = useState(null);
+
+  // AI suggestions
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
 
   const fetchEntries = useCallback(async () => {
     if (!patient?.id) return;
@@ -489,6 +630,41 @@ export default function PlanOpieki({ patient }) {
   const setField = (f, v) => setForm((s) => ({ ...s, [f]: v }));
   const setIntField = (f, v) => setIntForm((s) => ({ ...s, [f]: v }));
 
+  /* ─── AI Plan Generator ──────────────────────────────────────────────── */
+
+  const generateAiPlan = async () => {
+    if (!patient?.id) return;
+    setAiLoading(true);
+    setShowAiPanel(true);
+    try {
+      const res = await api.post('/ai/suggest-plan', { patient_id: patient.id });
+      if (Array.isArray(res.data?.suggestions)) {
+        setAiSuggestions(res.data.suggestions.map((s, i) => ({ ...s, _id: i })));
+      }
+    } catch (err) {
+      console.error('AI suggest-plan error', err);
+      notify('Błąd generowania sugestii AI', 'error');
+    } finally { setAiLoading(false); }
+  };
+
+  const acceptAiSuggestion = async (sug) => {
+    try {
+      const interwencje = (sug.interwencje || []).map((name) => ({
+        interwencja: name, data_rozpoczecia: '', godzina: '', interwal: '', ilosc_powtorzen: '', wykonane: [],
+      }));
+      await api.post('/plan-opieki', {
+        problem: sug.problem, diagnoza: sug.diagnoza, interwencje, patient_id: patient.id,
+      });
+      notify('Sugestia AI dodana do planu', 'success');
+      setAiSuggestions((prev) => prev.filter((s) => s._id !== sug._id));
+      fetchEntries();
+    } catch (err) { console.error(err); notify('Błąd dodawania sugestii', 'error'); }
+  };
+
+  const rejectAiSuggestion = (sug) => {
+    setAiSuggestions((prev) => prev.filter((s) => s._id !== sug._id));
+  };
+
   if (!patient) return null;
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -502,8 +678,51 @@ export default function PlanOpieki({ patient }) {
           <PageTitle>Plan Opieki Pielęgniarskiej</PageTitle>
           <PatientName>{patient.imie} {patient.nazwisko}</PatientName>
         </div>
-        <PrimaryBtn onClick={openAddEntry}>+ Nowy wpis</PrimaryBtn>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <AiGenerateBtn onClick={generateAiPlan} disabled={aiLoading}>
+            {aiLoading ? '⏳ Generowanie…' : '🤖 Generuj plan AI'}
+          </AiGenerateBtn>
+          <PrimaryBtn onClick={openAddEntry}>+ Nowy wpis</PrimaryBtn>
+        </div>
       </PageHeader>
+
+      {/* ── AI Suggestions Panel ───────────────────────────────────────── */}
+      {showAiPanel && (
+        <AiPanel>
+          <AiTitle>
+            <span>🤖</span> Sugestie AI na podstawie danych pacjenta
+            <CloseBtn style={{ marginLeft: 'auto', fontSize: '1.2rem' }} onClick={() => setShowAiPanel(false)}>×</CloseBtn>
+          </AiTitle>
+          {aiLoading ? (
+            <div style={{ textAlign: 'center', padding: 20, color: '#6b7280' }}>⏳ Generowanie sugestii…</div>
+          ) : aiSuggestions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: '#6b7280' }}>
+              Brak sugestii. Kliknij „🤖 Generuj plan AI" ponownie.
+            </div>
+          ) : (
+            aiSuggestions.map((sug) => (
+              <AiCard key={sug._id}>
+                <AiCardBody>
+                  <AiCardLabel>Problem</AiCardLabel>
+                  <AiCardText>{sug.problem}</AiCardText>
+                  <AiCardLabel style={{ marginTop: 6 }}>Diagnoza</AiCardLabel>
+                  <AiCardText>{sug.diagnoza}</AiCardText>
+                  {sug.interwencje?.length > 0 && (
+                    <>
+                      <AiCardLabel style={{ marginTop: 6 }}>Interwencje</AiCardLabel>
+                      <AiCardInts>{sug.interwencje.join(' • ')}</AiCardInts>
+                    </>
+                  )}
+                </AiCardBody>
+                <AiActions>
+                  <AiYes title="Akceptuj — dodaj do planu" onClick={() => acceptAiSuggestion(sug)}>✓</AiYes>
+                  <AiNo title="Odrzuć" onClick={() => rejectAiSuggestion(sug)}>✗</AiNo>
+                </AiActions>
+              </AiCard>
+            ))
+          )}
+        </AiPanel>
+      )}
 
       {loading ? (
         <EmptyState>Ładowanie…</EmptyState>
@@ -666,13 +885,15 @@ export default function PlanOpieki({ patient }) {
                 <FormLabel>Problem pielęgniarski <Required>*</Required></FormLabel>
                 <Autocomplete list={ICNP_DIAGNOZY} value={form.problem}
                   onChange={(v) => setField('problem', v)}
-                  placeholder="Np. Ból ostry, Ryzyko zakażenia…" required />
+                  placeholder="Np. Ból ostry, Ryzyko zakażenia…" required
+                  patientId={patient?.id} field="problem" />
               </FormGroup>
               <FormGroup>
                 <FormLabel>Diagnoza pielęgniarska (ICNP) <Required>*</Required></FormLabel>
                 <Autocomplete list={ICNP_DIAGNOZY} value={form.diagnoza}
                   onChange={(v) => setField('diagnoza', v)}
-                  placeholder="Np. Ból ostry, Deficyt samoopieki…" required />
+                  placeholder="Np. Ból ostry, Deficyt samoopieki…" required
+                  patientId={patient?.id} field="diagnoza" />
               </FormGroup>
             </ModalBody>
             <ModalFooter>
@@ -701,7 +922,8 @@ export default function PlanOpieki({ patient }) {
                 <FormLabel>Interwencja (ICNP) <Required>*</Required></FormLabel>
                 <Autocomplete list={ICNP_INTERWENCJE} value={intForm.interwencja}
                   onChange={(v) => setIntField('interwencja', v)}
-                  placeholder="Np. Ocena bólu, Podawanie leków…" required />
+                  placeholder="Np. Ocena bólu, Podawanie leków…" required
+                  patientId={patient?.id} field="interwencja" />
               </FormGroup>
 
               <FormRow $cols="1fr 1fr">
