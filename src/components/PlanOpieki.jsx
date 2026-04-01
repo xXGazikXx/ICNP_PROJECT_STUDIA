@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import api from '../api/axios';
 import { useNotification } from './Notification';
+import { useAuth } from '../context/AuthContext';
 import { ICNP_DIAGNOZY, ICNP_INTERWENCJE } from './icnpTerms';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -347,6 +348,24 @@ const AiGenerateBtn = styled.button`
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
+const AiBadge = styled.span`
+  display: inline-block; background: #dbeafe; color: #1d4ed8;
+  font-size: 0.65rem; font-weight: 700; border-radius: 4px;
+  padding: 2px 6px; margin-top: 4px;
+`;
+const CellRating = styled.div`
+  display: flex; gap: 4px; justify-content: center; margin-top: 6px;
+`;
+const RateBtn = styled.button`
+  width: 24px; height: 24px; border-radius: 6px; font-size: 0.75rem;
+  border: 1.5px solid ${({ $type }) => $type === 'yes' ? '#86efac' : '#fca5a5'};
+  background: ${({ $type }) => $type === 'yes' ? '#f0fdf4' : '#fef2f2'};
+  color: ${({ $type }) => $type === 'yes' ? '#16a34a' : '#dc2626'};
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  &:hover { opacity: 0.8; }
+  &:disabled { opacity: 0.4; cursor: default; }
+`;
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Fuzzy search helper
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -482,6 +501,8 @@ const EMPTY_INT = { interwencja: '', data_rozpoczecia: '', godzina: '', interwal
 
 export default function PlanOpieki({ patient }) {
   const notify = useNotification();
+  const { user } = useAuth();
+  const canAI = user && ['admin', 'prowadzacy'].includes(user.role);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -503,6 +524,9 @@ export default function PlanOpieki({ patient }) {
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiDaneSummary, setAiDaneSummary] = useState('');
+  const [aiContextData, setAiContextData] = useState('');
+  const [aiRatings, setAiRatings] = useState({});  // { entryId: { problem, diagnoza, int_0, int_1... } }
 
   const fetchEntries = useCallback(async () => {
     if (!patient?.id) return;
@@ -641,6 +665,8 @@ export default function PlanOpieki({ patient }) {
       if (Array.isArray(res.data?.suggestions)) {
         setAiSuggestions(res.data.suggestions.map((s, i) => ({ ...s, _id: i })));
       }
+      setAiDaneSummary(res.data?.dane_summary || '');
+      setAiContextData(res.data?.ai_context || '');
     } catch (err) {
       console.error('AI suggest-plan error', err);
       notify('Błąd generowania sugestii AI', 'error');
@@ -649,11 +675,11 @@ export default function PlanOpieki({ patient }) {
 
   const acceptAiSuggestion = async (sug) => {
     try {
-      const interwencje = (sug.interwencje || []).map((name) => ({
-        interwencja: name, data_rozpoczecia: '', godzina: '', interwal: '', ilosc_powtorzen: '', wykonane: [],
-      }));
-      await api.post('/plan-opieki', {
-        problem: sug.problem, diagnoza: sug.diagnoza, interwencje, patient_id: patient.id,
+      await api.post('/ai/accept', {
+        patient_id: patient.id,
+        original: { problem: sug.problem, diagnoza: sug.diagnoza, interwencje: sug.interwencje },
+        dane_summary: aiDaneSummary,
+        ai_context: aiContextData,
       });
       notify('Sugestia AI dodana do planu', 'success');
       setAiSuggestions((prev) => prev.filter((s) => s._id !== sug._id));
@@ -661,8 +687,23 @@ export default function PlanOpieki({ patient }) {
     } catch (err) { console.error(err); notify('Błąd dodawania sugestii', 'error'); }
   };
 
-  const rejectAiSuggestion = (sug) => {
+  const rejectAiSuggestion = async (sug) => {
+    try {
+      await api.post('/ai/reject', {
+        patient_id: patient.id,
+        original: { problem: sug.problem, diagnoza: sug.diagnoza, interwencje: sug.interwencje },
+        dane_summary: aiDaneSummary,
+        ai_context: aiContextData,
+      });
+    } catch (err) { console.error(err); }
     setAiSuggestions((prev) => prev.filter((s) => s._id !== sug._id));
+  };
+
+  const rateAiElement = (entryId, key, value) => {
+    setAiRatings((prev) => ({
+      ...prev,
+      [entryId]: { ...(prev[entryId] || {}), [key]: value },
+    }));
   };
 
   if (!patient) return null;
@@ -679,9 +720,11 @@ export default function PlanOpieki({ patient }) {
           <PatientName>{patient.imie} {patient.nazwisko}</PatientName>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <AiGenerateBtn onClick={generateAiPlan} disabled={aiLoading}>
-            {aiLoading ? '⏳ Generowanie…' : '🤖 Generuj plan AI'}
-          </AiGenerateBtn>
+          {canAI && (
+            <AiGenerateBtn onClick={generateAiPlan} disabled={aiLoading}>
+              {aiLoading ? '⏳ Generowanie…' : '🤖 Generuj plan AI'}
+            </AiGenerateBtn>
+          )}
           <PrimaryBtn onClick={openAddEntry}>+ Nowy wpis</PrimaryBtn>
         </div>
       </PageHeader>
@@ -752,7 +795,16 @@ export default function PlanOpieki({ patient }) {
                           {ICNP_DIAGNOZY.some((t) => t.toLowerCase() === (entry.problem || '').toLowerCase()) && (
                             <><br /><IcnpCode>[{icnpCode(entry.problem)}]</IcnpCode></>
                           )}
+                          {entry.ai && <><br /><AiBadge>🤖 AI</AiBadge></>}
                         </CellText>
+                        {entry.ai && (
+                          <CellRating onClick={(e) => e.stopPropagation()}>
+                            <RateBtn $type="yes" disabled={aiRatings[entry.id]?.problem === 'yes'}
+                              onClick={() => rateAiElement(entry.id, 'problem', 'yes')}>✓</RateBtn>
+                            <RateBtn $type="no" disabled={aiRatings[entry.id]?.problem === 'no'}
+                              onClick={() => rateAiElement(entry.id, 'problem', 'no')}>✗</RateBtn>
+                          </CellRating>
+                        )}
                       </CellContent>
                     </td>
 
@@ -764,7 +816,16 @@ export default function PlanOpieki({ patient }) {
                           {ICNP_DIAGNOZY.some((t) => t.toLowerCase() === (entry.diagnoza || '').toLowerCase()) && (
                             <><br /><IcnpCode>[{icnpCode(entry.diagnoza)}]</IcnpCode></>
                           )}
+                          {entry.ai && <><br /><AiBadge>🤖 AI</AiBadge></>}
                         </CellText>
+                        {entry.ai && (
+                          <CellRating onClick={(e) => e.stopPropagation()}>
+                            <RateBtn $type="yes" disabled={aiRatings[entry.id]?.diagnoza === 'yes'}
+                              onClick={() => rateAiElement(entry.id, 'diagnoza', 'yes')}>✓</RateBtn>
+                            <RateBtn $type="no" disabled={aiRatings[entry.id]?.diagnoza === 'no'}
+                              onClick={() => rateAiElement(entry.id, 'diagnoza', 'no')}>✗</RateBtn>
+                          </CellRating>
+                        )}
                       </CellContent>
                     </td>
 
@@ -784,6 +845,15 @@ export default function PlanOpieki({ patient }) {
                                   <div>
                                     {name}
                                     {intValid && <IntSubLabel>[{icnpCode(name)}]</IntSubLabel>}
+                                    {entry.ai && <AiBadge style={{ fontSize: '0.58rem', marginTop: 2 }}>🤖 AI</AiBadge>}
+                                    {entry.ai && (
+                                      <CellRating style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+                                        <RateBtn $type="yes" disabled={aiRatings[entry.id]?.[`int_${i}`] === 'yes'}
+                                          onClick={() => rateAiElement(entry.id, `int_${i}`, 'yes')}>✓</RateBtn>
+                                        <RateBtn $type="no" disabled={aiRatings[entry.id]?.[`int_${i}`] === 'no'}
+                                          onClick={() => rateAiElement(entry.id, `int_${i}`, 'no')}>✗</RateBtn>
+                                      </CellRating>
+                                    )}
                                   </div>
                                 </IntName>
 
