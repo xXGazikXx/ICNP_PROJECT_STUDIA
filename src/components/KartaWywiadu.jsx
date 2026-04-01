@@ -4,11 +4,27 @@ import ToggleCheckbox from './ToggleCheckbox';
 import api from '../api/axios';
 import { useNotification } from './Notification';
 
+const KRAJE = [
+  'Polska', 'Niemcy', 'Francja', 'Wielka Brytania', 'Włochy', 'Hiszpania',
+  'Czechy', 'Słowacja', 'Ukraina', 'Białoruś', 'Litwa', 'Rosja', 'Szwecja',
+  'Norwegia', 'Dania', 'Holandia', 'Belgia', 'Austria', 'Szwajcaria',
+  'Stany Zjednoczone', 'Kanada', 'Inne',
+];
+const WOJEWODZTWA = [
+  'DOLNOŚLĄSKIE', 'KUJAWSKO-POMORSKIE', 'LUBELSKIE', 'LUBUSKIE', 'ŁÓDZKIE',
+  'MAŁOPOLSKIE', 'MAZOWIECKIE', 'OPOLSKIE', 'PODKARPACKIE', 'PODLASKIE',
+  'POMORSKIE', 'ŚLĄSKIE', 'ŚWIĘTOKRZYSKIE', 'WARMIŃSKO-MAZURSKIE',
+  'WIELKOPOLSKIE', 'ZACHODNIOPOMORSKIE',
+];
+const STAN_CYWILNY = ['kawaler', 'panna', 'mężatka', 'mąż', 'wdowa', 'wdowiec'];
+const WYKSZTALCENIE = ['podstawowe', 'gimnazjalne', 'zasadnicze zawodowe', 'średnie', 'wyższe'];
+const KATEGORIE_PACJENTA = ['Kat I', 'Kat II', 'Kat III'];
+const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
 const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-Stokesa', 'Kussmaula', 'Biota', 'inny'];
 const TYPY_KONTAKTU = ['słowny', 'pozasłowny', 'pisemny'];
 
-/* ─── Inline AutocompleteInput for KartaWywiadu ─── */
-function ACInput({ value, onChange, options, placeholder }) {
+/* ─── Inline Autocomplete ─── */
+function ACInput({ value, onChange, options, placeholder, name }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const filtered = options.filter((o) => o.toLowerCase().includes((value || '').toLowerCase()));
@@ -19,175 +35,166 @@ function ACInput({ value, onChange, options, placeholder }) {
   }, []);
   return (
     <ACWrap ref={ref}>
-      <input value={value} onChange={(e) => { onChange(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} placeholder={placeholder} autoComplete="off" />
+      <input name={name} value={value} onChange={(e) => { onChange(e); setOpen(true); }} onFocus={() => setOpen(true)} placeholder={placeholder} autoComplete="off" />
       {open && filtered.length > 0 && (
-        <ACDrop>{filtered.slice(0, 6).map((o) => (
-          <ACOpt key={o} onMouseDown={() => { onChange(o); setOpen(false); }}>{o}</ACOpt>
+        <ACDrop>{filtered.slice(0, 8).map((o) => (
+          <ACOpt key={o} onMouseDown={() => { onChange({ target: { name, value: o } }); setOpen(false); }}>{o}</ACOpt>
         ))}</ACDrop>
       )}
     </ACWrap>
   );
 }
 
-const initData = (patient) => {
-  const kw = patient?.karta_wywiadu || {};
-  return {
-    kontakt: {
-      enabled: false,
-      typ: kw.kontakt?.typ || '',
-      logiczny: kw.kontakt?.logiczny || false,
-      zachowany: kw.kontakt?.zachowany || false,
-      brak_kontaktu: kw.kontakt?.brak_kontaktu || false,
-    },
-    choroby: {
-      enabled: false,
-      objawy_obecnej: kw.choroby?.objawy_obecnej || '',
-      przebyte: kw.choroby?.przebyte || [{ choroba: '', od_kiedy: '', leczenie: '' }],
-      zakazne: kw.choroby?.zakazne || [{ choroba: '', od_kiedy: '' }],
-      zabiegi: kw.choroby?.zabiegi || [{ zabieg: '', data: '' }],
-    },
-    parametry: {
-      enabled: false,
-      wzrost: kw.parametry?.wzrost || '',
-      masa: kw.parametry?.masa || '',
-      bmi: kw.parametry?.bmi || '',
-      obwod_glowy: kw.parametry?.obwod_glowy || '',
-      obwod_klatki: kw.parametry?.obwod_klatki || '',
-    },
-    oznaki_zycia: {
-      enabled: false,
-      temperatura: kw.oznaki_zycia?.temperatura || '',
-      ctk_skurczowe: kw.oznaki_zycia?.ctk_skurczowe || '',
-      ctk_rozkurczowe: kw.oznaki_zycia?.ctk_rozkurczowe || '',
-      tetno: kw.oznaki_zycia?.tetno || '',
-      oddech: kw.oznaki_zycia?.oddech || '',
-      rodzaj_oddechu: kw.oznaki_zycia?.rodzaj_oddechu || 'prawidłowy',
-    },
-    ocena_bolu: {
-      enabled: false,
-      wpisy: kw.ocena_bolu?.wpisy || [{ kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' }],
-    },
-    krew: {
-      enabled: false,
-      hbs: kw.krew?.hbs || 'nie badano',
-      hiv: kw.krew?.hiv || 'nie badano',
-      transfuzje: kw.krew?.transfuzje || false,
-      reakcje: kw.krew?.reakcje || '',
-    },
-    alergie: {
-      enabled: false,
-      wystepuja: kw.alergie?.wystepuja || false,
-      wpisy: kw.alergie?.wpisy || [{ alergia: '', opis: '' }],
-    },
-    styl_zycia: {
-      enabled: false,
-      palenie: kw.styl_zycia?.palenie || false,
-      palenie_ile: kw.styl_zycia?.palenie_ile || '',
-      alkohol: kw.styl_zycia?.alkohol || false,
-      alkohol_ile: kw.styl_zycia?.alkohol_ile || '',
-      narkotyki: kw.styl_zycia?.narkotyki || false,
-      narkotyki_wpisy: kw.styl_zycia?.narkotyki_wpisy || [{ nazwa: '', czestotliwosc: '' }],
-      aktywnosc: kw.styl_zycia?.aktywnosc || '',
-      dieta: kw.styl_zycia?.dieta || '',
-    },
-  };
-};
-
-export default function KartaWywiadu({ patient }) {
+export default function KartaWywiadu({ patient, onPatientUpdated }) {
   const notify = useNotification();
-  const [data, setData] = useState(() => initData(patient));
-  const [savingSection, setSavingSection] = useState(null);
-  const [saveModal, setSaveModal] = useState(null); // { sectionKey }
-  const [saveDate, setSaveDate] = useState('');
-  const [saveTime, setSaveTime] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const buildForm = (p) => {
+    if (!p) return {};
+    const dp = p.dane_personalne || {};
+    const adr = p.adres || {};
+    const dd = p.dane_dodatkowe || {};
+    const dok = p.dane_opiekuna || {};
+    return {
+      imie: p.imie || '', nazwisko: p.nazwisko || '',
+      pesel: p.pesel || '', plec: p.plec || '',
+      data_urodzenia: p.data_urodzenia || '',
+      wiek: p.wiek != null ? String(p.wiek) : '',
+      numer_ksiegi_glownej: p.numer_ksiegi_glownej || '',
+      nazwisko_panienskie: dp.nazwisko_panienskie || '',
+      kraj_urodzenia: dp.kraj_urodzenia || '',
+      miejsce_urodzenia: dp.miejsce_urodzenia || '',
+      kraj_zamieszkania: adr.kraj || '', wojewodztwo: adr.wojewodztwo || '',
+      powiat: adr.powiat || '', miejscowosc: adr.miejscowosc || '',
+      kod_pocztowy: adr.kod_pocztowy || '', ulica: adr.ulica || '',
+      nr_domu: adr.nr_domu || '', nr_mieszkania: adr.nr_mieszkania || '',
+      stan_cywilny: dd.stan_cywilny || '', wyksztalcenie: dd.wyksztalcenie || '',
+      zawod_wykonywany: dd.zawod_wykonywany || '',
+      opiekun_imie: dok.imie || '', opiekun_nazwisko: dok.nazwisko || '',
+      opiekun_telefon: dok.telefon || '', opiekun_pokrewienstwo: dok.pokrewienstwo || '',
+      kontakt_imie: dd.kontakt_imie || '', kontakt_nazwisko: dd.kontakt_nazwisko || '',
+      kontakt_telefon: dd.kontakt_telefon || '',
+      kategoria_pacjenta: dd.kategoria_pacjenta || '',
+      oddzial: dd.oddzial || p.jednostka || '',
+      nr_sali: dd.nr_sali || '',
+      data_przyjecia: dd.data_przyjecia || '',
+      godz_przyjecia: dd.godz_przyjecia || '',
+      tryb_przyjecia: dd.tryb_przyjecia || '',
+      lekarz: dd.lekarz || '', lekarz_telefon: dd.lekarz_telefon || '',
+      przyczyna_przyjecia: dd.przyczyna_przyjecia || '',
+    };
+  };
+
+  const buildKW = (p) => {
+    const kw = p?.karta_wywiadu || {};
+    return {
+      kontakt: { typ: kw.kontakt?.typ || '', logiczny: kw.kontakt?.logiczny || false, zachowany: kw.kontakt?.zachowany || false, brak_kontaktu: kw.kontakt?.brak_kontaktu || false },
+      choroby: { objawy_obecnej: kw.choroby?.objawy_obecnej || '', przebyte: kw.choroby?.przebyte || [{ choroba: '', od_kiedy: '', leczenie: '' }], zakazne: kw.choroby?.zakazne || [{ choroba: '', od_kiedy: '' }], zabiegi: kw.choroby?.zabiegi || [{ zabieg: '', data: '' }] },
+      parametry: { wzrost: kw.parametry?.wzrost || '', masa: kw.parametry?.masa || '', bmi: kw.parametry?.bmi || '', obwod_glowy: kw.parametry?.obwod_glowy || '', obwod_klatki: kw.parametry?.obwod_klatki || '' },
+      oznaki_zycia: { temperatura: kw.oznaki_zycia?.temperatura || '', ctk_skurczowe: kw.oznaki_zycia?.ctk_skurczowe || '', ctk_rozkurczowe: kw.oznaki_zycia?.ctk_rozkurczowe || '', tetno: kw.oznaki_zycia?.tetno || '', oddech: kw.oznaki_zycia?.oddech || '', rodzaj_oddechu: kw.oznaki_zycia?.rodzaj_oddechu || 'prawidłowy' },
+      ocena_bolu: { wpisy: kw.ocena_bolu?.wpisy || [{ kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' }] },
+      krew: { hbs: kw.krew?.hbs || 'nie badano', hiv: kw.krew?.hiv || 'nie badano', transfuzje: kw.krew?.transfuzje || false, reakcje: kw.krew?.reakcje || '' },
+      alergie: { wystepuja: kw.alergie?.wystepuja || false, wpisy: kw.alergie?.wpisy || [{ alergia: '', opis: '' }] },
+      styl_zycia: { palenie: kw.styl_zycia?.palenie || false, palenie_ile: kw.styl_zycia?.palenie_ile || '', alkohol: kw.styl_zycia?.alkohol || false, alkohol_ile: kw.styl_zycia?.alkohol_ile || '', narkotyki: kw.styl_zycia?.narkotyki || false, narkotyki_wpisy: kw.styl_zycia?.narkotyki_wpisy || [{ nazwa: '', czestotliwosc: '' }], aktywnosc: kw.styl_zycia?.aktywnosc || '', dieta: kw.styl_zycia?.dieta || '' },
+    };
+  };
+
+  const [form, setForm] = useState(() => buildForm(patient));
+  const [kw, setKw] = useState(() => buildKW(patient));
 
   useEffect(() => {
-    setData(initData(patient));
+    setForm(buildForm(patient));
+    setKw(buildKW(patient));
   }, [patient?.id]);
 
-  const update = useCallback((section, field, value) => {
-    setData((prev) => ({
-      ...prev,
-      [section]: { ...prev[section], [field]: value },
-    }));
-  }, []);
-
-  const toggleSection = useCallback((section) => {
-    setData((prev) => ({
-      ...prev,
-      [section]: { ...prev[section], enabled: !prev[section].enabled },
-    }));
-  }, []);
-
-  // BMI auto-calc
-  useEffect(() => {
-    const w = parseFloat(data.parametry.masa);
-    const h = parseFloat(data.parametry.wzrost) / 100;
-    if (w > 0 && h > 0) {
-      update('parametry', 'bmi', (w / (h * h)).toFixed(1));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'data_urodzenia' && value) {
+      const age = Math.floor((Date.now() - new Date(value)) / (365.25 * 24 * 60 * 60 * 1000));
+      setForm((prev) => ({ ...prev, data_urodzenia: value, wiek: age >= 0 ? String(age) : '' }));
+      return;
     }
-  }, [data.parametry.masa, data.parametry.wzrost, update]);
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const updateTableRow = (section, field, index, key, value) => {
-    setData((prev) => {
+  const kwUpdate = useCallback((section, field, value) => {
+    setKw((prev) => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
+  }, []);
+
+  const kwUpdateRow = (section, field, index, key, value) => {
+    setKw((prev) => {
       const rows = [...prev[section][field]];
       rows[index] = { ...rows[index], [key]: value };
       return { ...prev, [section]: { ...prev[section], [field]: rows } };
     });
   };
-
-  const addTableRow = (section, field, template) => {
-    setData((prev) => ({
-      ...prev,
-      [section]: { ...prev[section], [field]: [...prev[section][field], { ...template }] },
-    }));
+  const kwAddRow = (section, field, template) => {
+    setKw((prev) => ({ ...prev, [section]: { ...prev[section], [field]: [...prev[section][field], { ...template }] } }));
   };
-
-  const removeTableRow = (section, field, index) => {
-    setData((prev) => {
+  const kwRemoveRow = (section, field, index) => {
+    setKw((prev) => {
       const rows = prev[section][field].filter((_, i) => i !== index);
       return { ...prev, [section]: { ...prev[section], [field]: rows.length ? rows : [{ ...prev[section][field][0] }] } };
     });
   };
 
-  const openSaveModal = (sectionKey) => {
-    const now = new Date();
-    setSaveDate(now.toISOString().slice(0, 10));
-    setSaveTime(now.toTimeString().slice(0, 5));
-    setSaveModal({ sectionKey });
-  };
+  useEffect(() => {
+    const w = parseFloat(kw.parametry.masa);
+    const h = parseFloat(kw.parametry.wzrost) / 100;
+    if (w > 0 && h > 0) kwUpdate('parametry', 'bmi', (w / (h * h)).toFixed(1));
+  }, [kw.parametry.masa, kw.parametry.wzrost, kwUpdate]);
 
-  const handleConfirmSave = async () => {
-    if (!saveModal) return;
-    const { sectionKey } = saveModal;
-    setSavingSection(sectionKey);
-    setSaveModal(null);
-    try {
-      const merged = { ...(patient.karta_wywiadu || {}), [sectionKey]: data[sectionKey] };
-      await api.put(`/patients/${patient.id}`, { karta_wywiadu: merged });
-      await api.post('/wywiady', {
-        patient_id: patient.id,
-        content: { section: sectionKey, data: data[sectionKey] },
-        date: `${saveDate} ${saveTime}`,
-      });
-      notify('Sekcja zapisana pomyślnie', 'success');
-    } catch (err) {
-      console.error(err);
-      notify('Błąd zapisu sekcji', 'error');
-    } finally {
-      setSavingSection(null);
+  const handleBrakKontaktu = () => {
+    if (!kw.kontakt.brak_kontaktu) {
+      setKw((prev) => ({ ...prev, kontakt: { ...prev.kontakt, brak_kontaktu: true, logiczny: false, zachowany: false, typ: '' } }));
+    } else {
+      kwUpdate('kontakt', 'brak_kontaktu', false);
     }
   };
 
-  // Brak kontaktu - reset other fields
-  const handleBrakKontaktu = () => {
-    if (!data.kontakt.brak_kontaktu) {
-      setData((prev) => ({
-        ...prev,
-        kontakt: { ...prev.kontakt, brak_kontaktu: true, logiczny: false, zachowany: false, typ: '' },
-      }));
-    } else {
-      update('kontakt', 'brak_kontaktu', false);
+  useEffect(() => {
+    const kod = form.kod_pocztowy;
+    if (!/^\d{2}-\d{3}$/.test(kod)) return;
+    const ctrl = new AbortController();
+    fetch(`https://kodpocztowy.intami.pl/api/${kod}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && data.length > 0) {
+          setForm((prev) => ({
+            ...prev,
+            miejscowosc: data[0].miejscowosc || prev.miejscowosc,
+            wojewodztwo: (data[0].wojewodztwo || '').toUpperCase() || prev.wojewodztwo,
+            powiat: data[0].powiat || prev.powiat,
+          }));
+        }
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [form.kod_pocztowy]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        imie: form.imie, nazwisko: form.nazwisko,
+        plec: form.plec || null,
+        data_urodzenia: form.data_urodzenia || null,
+        wiek: form.wiek ? parseInt(form.wiek, 10) : null,
+        numer_ksiegi_glownej: form.numer_ksiegi_glownej || null,
+        dane_personalne: { nazwisko_panienskie: form.nazwisko_panienskie || null, kraj_urodzenia: form.kraj_urodzenia || null, miejsce_urodzenia: form.miejsce_urodzenia || null },
+        adres: { kraj: form.kraj_zamieszkania || null, wojewodztwo: form.wojewodztwo || null, powiat: form.powiat || null, miejscowosc: form.miejscowosc || null, kod_pocztowy: form.kod_pocztowy || null, ulica: form.ulica || null, nr_domu: form.nr_domu || null, nr_mieszkania: form.nr_mieszkania || null },
+        dane_dodatkowe: { stan_cywilny: form.stan_cywilny || null, wyksztalcenie: form.wyksztalcenie || null, zawod_wykonywany: form.zawod_wykonywany || null, kategoria_pacjenta: form.kategoria_pacjenta || null, oddzial: form.oddzial || null, nr_sali: form.nr_sali || null, data_przyjecia: form.data_przyjecia || null, godz_przyjecia: form.godz_przyjecia || null, tryb_przyjecia: form.tryb_przyjecia || null, lekarz: form.lekarz || null, lekarz_telefon: form.lekarz_telefon || null, przyczyna_przyjecia: form.przyczyna_przyjecia || null, kontakt_imie: form.kontakt_imie || null, kontakt_nazwisko: form.kontakt_nazwisko || null, kontakt_telefon: form.kontakt_telefon || null },
+        dane_opiekuna: { imie: form.opiekun_imie || null, nazwisko: form.opiekun_nazwisko || null, telefon: form.opiekun_telefon || null, pokrewienstwo: form.opiekun_pokrewienstwo || null },
+        karta_wywiadu: kw,
+      };
+      await api.put(`/patients/${patient.id}`, payload);
+      notify('Karta wywiadu zapisana pomyślnie', 'success');
+      if (onPatientUpdated) onPatientUpdated();
+    } catch (err) {
+      console.error(err);
+      notify('Błąd zapisu karty wywiadu', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -197,406 +204,307 @@ export default function KartaWywiadu({ patient }) {
     <Wrapper>
       <Title>Karta wywiadu — {patient.imie} {patient.nazwisko}</Title>
 
-      {/* KONTAKT Z PACJENTEM */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('kontakt')}>
-          <Chevron $open={data.kontakt.enabled}>▶</Chevron>
-          <SectionName>Kontakt z pacjentem</SectionName>
-        </SectionHeader>
-        {data.kontakt.enabled && (
-          <SectionBody>
-            <Row3>
-              <Field>
-                <label>Typ kontaktu</label>
-                <ACInput value={data.kontakt.typ} onChange={(v) => update('kontakt', 'typ', v)} options={TYPY_KONTAKTU} placeholder="Wpisz typ kontaktu..." />
-              </Field>
-              <Field style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
-                <ToggleCheckbox checked={data.kontakt.logiczny} onChange={() => !data.kontakt.brak_kontaktu && update('kontakt', 'logiczny', !data.kontakt.logiczny)} label="Kontakt logiczny" />
-                <ToggleCheckbox checked={data.kontakt.zachowany} onChange={() => !data.kontakt.brak_kontaktu && update('kontakt', 'zachowany', !data.kontakt.zachowany)} label="Kontakt zachowany" />
-              </Field>
-              <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
-                <ToggleCheckbox checked={data.kontakt.brak_kontaktu} onChange={handleBrakKontaktu} label="Brak kontaktu" />
-              </Field>
-            </Row3>
-            <SaveSectionBtn onClick={() => openSaveModal('kontakt')} disabled={savingSection === 'kontakt'}>
-              {savingSection === 'kontakt' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
+      <FormArea>
+        <SectionTitle>Dane personalne</SectionTitle>
+        <Row3>
+          <Field><label>Imię</label><input name="imie" value={form.imie} onChange={handleChange} /></Field>
+          <Field><label>Nazwisko</label><input name="nazwisko" value={form.nazwisko} onChange={handleChange} /></Field>
+          <Field><label>Nazwisko panieńskie</label><input name="nazwisko_panienskie" value={form.nazwisko_panienskie} onChange={handleChange} /></Field>
+        </Row3>
+        <Row>
+          <Field>
+            <label>Płeć</label>
+            <RadioGroup>
+              <label><input type="radio" name="plec" value="M" checked={form.plec === 'M'} onChange={handleChange} /> Mężczyzna</label>
+              <label><input type="radio" name="plec" value="K" checked={form.plec === 'K'} onChange={handleChange} /> Kobieta</label>
+            </RadioGroup>
+          </Field>
+        </Row>
+        <Row3>
+          <Field><label>PESEL</label><input name="pesel" value={form.pesel} readOnly style={{ background: '#f5f5f5' }} /></Field>
+          <Field><label>Data urodzenia</label><input name="data_urodzenia" type="date" value={form.data_urodzenia} onChange={handleChange} /></Field>
+          <Field><label>Wiek</label><input value={form.wiek} readOnly style={{ background: '#f5f5f5' }} /></Field>
+        </Row3>
+        <Row3>
+          <Field><label>Numer księgi głównej</label><input name="numer_ksiegi_glownej" value={form.numer_ksiegi_glownej} onChange={handleChange} /></Field>
+          <Field><label>Kraj urodzenia</label><ACInput name="kraj_urodzenia" value={form.kraj_urodzenia} onChange={handleChange} options={KRAJE} placeholder="Wpisz kraj..." /></Field>
+          <Field><label>Miejsce urodzenia</label><input name="miejsce_urodzenia" value={form.miejsce_urodzenia} onChange={handleChange} /></Field>
+        </Row3>
+
+        <SectionTitle>Adres zamieszkania</SectionTitle>
+        <Row3>
+          <Field><label>Kod pocztowy</label><input name="kod_pocztowy" value={form.kod_pocztowy} onChange={handleChange} placeholder="00-000" /></Field>
+          <Field><label>Miejscowość</label><input name="miejscowosc" value={form.miejscowosc} onChange={handleChange} /></Field>
+          <Field><label>Województwo</label><ACInput name="wojewodztwo" value={form.wojewodztwo} onChange={handleChange} options={WOJEWODZTWA} placeholder="Wpisz województwo..." /></Field>
+        </Row3>
+        <Row3>
+          <Field><label>Powiat</label><input name="powiat" value={form.powiat} onChange={handleChange} /></Field>
+          <Field><label>Kraj zamieszkania</label><ACInput name="kraj_zamieszkania" value={form.kraj_zamieszkania} onChange={handleChange} options={KRAJE} placeholder="Wpisz kraj..." /></Field>
+          <Field><label>Ulica</label><input name="ulica" value={form.ulica} onChange={handleChange} /></Field>
+        </Row3>
+        <Row2>
+          <Field><label>Nr domu</label><input name="nr_domu" value={form.nr_domu} onChange={handleChange} /></Field>
+          <Field><label>Nr mieszkania</label><input name="nr_mieszkania" value={form.nr_mieszkania} onChange={handleChange} /></Field>
+        </Row2>
+
+        <SectionTitle>Status Społeczny</SectionTitle>
+        <Row3>
+          <Field><label>Stan cywilny</label><ACInput name="stan_cywilny" value={form.stan_cywilny} onChange={handleChange} options={STAN_CYWILNY} placeholder="Wpisz stan cywilny..." /></Field>
+          <Field><label>Wykształcenie</label><ACInput name="wyksztalcenie" value={form.wyksztalcenie} onChange={handleChange} options={WYKSZTALCENIE} placeholder="Wpisz wykształcenie..." /></Field>
+          <Field><label>Zawód wykonywany</label><input name="zawod_wykonywany" value={form.zawod_wykonywany} onChange={handleChange} /></Field>
+        </Row3>
+
+        <SectionTitle>Dane opiekuna</SectionTitle>
+        <Row3>
+          <Field><label>Imię opiekuna</label><input name="opiekun_imie" value={form.opiekun_imie} onChange={handleChange} /></Field>
+          <Field><label>Nazwisko opiekuna</label><input name="opiekun_nazwisko" value={form.opiekun_nazwisko} onChange={handleChange} /></Field>
+          <Field><label>Telefon opiekuna</label><input name="opiekun_telefon" value={form.opiekun_telefon} onChange={handleChange} /></Field>
+        </Row3>
+        <Row2>
+          <Field><label>Stopień pokrewieństwa</label><input name="opiekun_pokrewienstwo" value={form.opiekun_pokrewienstwo} onChange={handleChange} placeholder="np. matka, ojciec, brat" /></Field>
+        </Row2>
+
+        <SectionTitle>Osoba kontaktowa</SectionTitle>
+        <Row3>
+          <Field><label>Imię</label><input name="kontakt_imie" value={form.kontakt_imie} onChange={handleChange} /></Field>
+          <Field><label>Nazwisko</label><input name="kontakt_nazwisko" value={form.kontakt_nazwisko} onChange={handleChange} /></Field>
+          <Field><label>Telefon</label><input name="kontakt_telefon" value={form.kontakt_telefon} onChange={handleChange} /></Field>
+        </Row3>
+
+        <SectionTitle>Dane oddziałowe</SectionTitle>
+        <Row3>
+          <Field><label>Kategoria pacjenta</label><ACInput name="kategoria_pacjenta" value={form.kategoria_pacjenta} onChange={handleChange} options={KATEGORIE_PACJENTA} placeholder="Wybierz kategorię..." /></Field>
+          <Field><label>Oddział</label><input name="oddzial" value={form.oddzial} onChange={handleChange} /></Field>
+          <Field><label>Numer sali</label><input name="nr_sali" value={form.nr_sali} onChange={handleChange} inputMode="numeric" /></Field>
+        </Row3>
+        <Row3>
+          <Field><label>Data przyjęcia</label><input name="data_przyjecia" type="date" value={form.data_przyjecia} onChange={handleChange} /></Field>
+          <Field><label>Godzina przyjęcia</label><input name="godz_przyjecia" type="time" value={form.godz_przyjecia} onChange={handleChange} /></Field>
+          <Field><label>Tryb przyjęcia</label><ACInput name="tryb_przyjecia" value={form.tryb_przyjecia} onChange={handleChange} options={TRYBY_PRZYJECIA} placeholder="Wybierz tryb..." /></Field>
+        </Row3>
+        <Row2>
+          <Field><label>Lekarz prowadzący</label><input name="lekarz" value={form.lekarz} onChange={handleChange} /></Field>
+          <Field><label>Telefon lekarza</label><input name="lekarz_telefon" value={form.lekarz_telefon} onChange={handleChange} /></Field>
+        </Row2>
+        <Field>
+          <label>Przyczyna przyjęcia do szpitala</label>
+          <textarea name="przyczyna_przyjecia" value={form.przyczyna_przyjecia} onChange={handleChange} rows={3} />
+        </Field>
+
+        {/* ═══ KARTA WYWIADU ═══ */}
+        <SectionTitle>Kontakt z pacjentem</SectionTitle>
+        <Row3>
+          <Field>
+            <label>Typ kontaktu</label>
+            <ACInput name="__kw_typ" value={kw.kontakt.typ} onChange={(e) => kwUpdate('kontakt', 'typ', e.target.value)} options={TYPY_KONTAKTU} placeholder="Wpisz typ kontaktu..." />
+          </Field>
+          <Field style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 }}>
+            <ToggleCheckbox checked={kw.kontakt.logiczny} onChange={() => !kw.kontakt.brak_kontaktu && kwUpdate('kontakt', 'logiczny', !kw.kontakt.logiczny)} label="Kontakt logiczny" />
+            <ToggleCheckbox checked={kw.kontakt.zachowany} onChange={() => !kw.kontakt.brak_kontaktu && kwUpdate('kontakt', 'zachowany', !kw.kontakt.zachowany)} label="Kontakt zachowany" />
+          </Field>
+          <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+            <ToggleCheckbox checked={kw.kontakt.brak_kontaktu} onChange={handleBrakKontaktu} label="Brak kontaktu" />
+          </Field>
+        </Row3>
+
+        <SectionTitle>Choroby i zabiegi</SectionTitle>
+        <Field>
+          <label>Objawy choroby obecnej</label>
+          <textarea rows={3} value={kw.choroby.objawy_obecnej} onChange={(e) => kwUpdate('choroby', 'objawy_obecnej', e.target.value)} />
+        </Field>
+        <SmallTitle>Choroby przebyte</SmallTitle>
+        <DataTable>
+          <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
+          <tbody>
+            {kw.choroby.przebyte.map((row, i) => (
+              <tr key={i}>
+                <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'choroba', e.target.value)} /></td>
+                <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'leczenie', e.target.value)} /></td>
+                <td><RemoveBtn onClick={() => kwRemoveRow('choroby', 'przebyte', i)}>×</RemoveBtn></td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+        <AddRowBtn onClick={() => kwAddRow('choroby', 'przebyte', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</AddRowBtn>
+        <SmallTitle>Choroby zakaźne</SmallTitle>
+        <DataTable>
+          <thead><tr><th>Choroba</th><th>Od kiedy</th><th></th></tr></thead>
+          <tbody>
+            {kw.choroby.zakazne.map((row, i) => (
+              <tr key={i}>
+                <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'zakazne', i, 'choroba', e.target.value)} /></td>
+                <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'zakazne', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                <td><RemoveBtn onClick={() => kwRemoveRow('choroby', 'zakazne', i)}>×</RemoveBtn></td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+        <AddRowBtn onClick={() => kwAddRow('choroby', 'zakazne', { choroba: '', od_kiedy: '' })}>+ Dodaj</AddRowBtn>
+        <SmallTitle>Przebyte zabiegi operacyjne</SmallTitle>
+        <DataTable>
+          <thead><tr><th>Zabieg</th><th>Data</th><th></th></tr></thead>
+          <tbody>
+            {kw.choroby.zabiegi.map((row, i) => (
+              <tr key={i}>
+                <td><input value={row.zabieg} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'zabieg', e.target.value)} /></td>
+                <td><input type="date" value={row.data} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'data', e.target.value)} /></td>
+                <td><RemoveBtn onClick={() => kwRemoveRow('choroby', 'zabiegi', i)}>×</RemoveBtn></td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+        <AddRowBtn onClick={() => kwAddRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</AddRowBtn>
+
+        <SectionTitle>Parametry</SectionTitle>
+        <Row3>
+          <Field><label>Wzrost (cm)</label><input type="number" min="0" value={kw.parametry.wzrost} onChange={(e) => kwUpdate('parametry', 'wzrost', e.target.value)} /></Field>
+          <Field><label>Masa ciała (kg)</label><input type="number" min="0" step="0.1" value={kw.parametry.masa} onChange={(e) => kwUpdate('parametry', 'masa', e.target.value)} /></Field>
+          <Field><label>BMI</label><input value={kw.parametry.bmi} readOnly style={{ background: '#f0f0f0' }} /></Field>
+        </Row3>
+        <Row2>
+          <Field><label>Obwód głowy (cm)</label><input type="number" min="0" value={kw.parametry.obwod_glowy} onChange={(e) => kwUpdate('parametry', 'obwod_glowy', e.target.value)} /></Field>
+          <Field><label>Obwód klatki piersiowej (cm)</label><input type="number" min="0" value={kw.parametry.obwod_klatki} onChange={(e) => kwUpdate('parametry', 'obwod_klatki', e.target.value)} /></Field>
+        </Row2>
+
+        <SectionTitle>Oznaki życia</SectionTitle>
+        <Row3>
+          <Field><label>Temperatura (°C)</label><input type="number" step="0.1" min="30" max="45" value={kw.oznaki_zycia.temperatura} onChange={(e) => kwUpdate('oznaki_zycia', 'temperatura', e.target.value)} /></Field>
+          <Field><label>CTK skurczowe (mmHg)</label><input type="number" min="0" value={kw.oznaki_zycia.ctk_skurczowe} onChange={(e) => kwUpdate('oznaki_zycia', 'ctk_skurczowe', e.target.value)} /></Field>
+          <Field><label>CTK rozkurczowe (mmHg)</label><input type="number" min="0" value={kw.oznaki_zycia.ctk_rozkurczowe} onChange={(e) => kwUpdate('oznaki_zycia', 'ctk_rozkurczowe', e.target.value)} /></Field>
+        </Row3>
+        <Row3>
+          <Field><label>Tętno (ud./min)</label><input type="number" min="0" value={kw.oznaki_zycia.tetno} onChange={(e) => kwUpdate('oznaki_zycia', 'tetno', e.target.value)} /></Field>
+          <Field><label>Oddech (odd./min)</label><input type="number" min="0" value={kw.oznaki_zycia.oddech} onChange={(e) => kwUpdate('oznaki_zycia', 'oddech', e.target.value)} /></Field>
+          <Field><label>Rodzaj oddechu</label><ACInput name="__kw_oddech" value={kw.oznaki_zycia.rodzaj_oddechu} onChange={(e) => kwUpdate('oznaki_zycia', 'rodzaj_oddechu', e.target.value)} options={RODZAJE_ODDECHU} placeholder="Wpisz rodzaj..." /></Field>
+        </Row3>
+
+        <SectionTitle>Ocena bólu</SectionTitle>
+        <DataTable>
+          <thead><tr><th>Kategoria</th><th>Lokalizacja</th><th>Częstotliwość</th><th>Intensywność</th><th></th></tr></thead>
+          <tbody>
+            {kw.ocena_bolu.wpisy.map((row, i) => (
+              <tr key={i}>
+                <td>
+                  <select value={row.kategoria} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'kategoria', e.target.value)}>
+                    <option value="">— wybierz —</option><option>ostry</option><option>przewlekły</option><option>nawracający</option>
+                  </select>
+                </td>
+                <td><input value={row.lokalizacja} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'lokalizacja', e.target.value)} /></td>
+                <td>
+                  <select value={row.czestotliwosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'czestotliwosc', e.target.value)}>
+                    <option value="">— wybierz —</option><option>ciągły</option><option>okresowy</option><option>sporadyczny</option>
+                  </select>
+                </td>
+                <td><input type="number" min="0" max="10" value={row.intensywnosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'intensywnosc', e.target.value)} /></td>
+                <td><RemoveBtn onClick={() => kwRemoveRow('ocena_bolu', 'wpisy', i)}>×</RemoveBtn></td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+        <AddRowBtn onClick={() => kwAddRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</AddRowBtn>
+
+        <SectionTitle>Krew</SectionTitle>
+        <Row3>
+          <Field>
+            <label>HBs Ag</label>
+            <select value={kw.krew.hbs} onChange={(e) => kwUpdate('krew', 'hbs', e.target.value)}>
+              <option>nie badano</option><option>dodatni</option><option>ujemny</option>
+            </select>
+          </Field>
+          <Field>
+            <label>HIV</label>
+            <select value={kw.krew.hiv} onChange={(e) => kwUpdate('krew', 'hiv', e.target.value)}>
+              <option>nie badano</option><option>dodatni</option><option>ujemny</option>
+            </select>
+          </Field>
+          <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+            <ToggleCheckbox checked={kw.krew.transfuzje} onChange={() => kwUpdate('krew', 'transfuzje', !kw.krew.transfuzje)} label="Transfuzje krwi" />
+          </Field>
+        </Row3>
+        {kw.krew.transfuzje && (
+          <Field>
+            <label>Reakcje potransfuzyjne</label>
+            <textarea rows={2} value={kw.krew.reakcje} onChange={(e) => kwUpdate('krew', 'reakcje', e.target.value)} />
+          </Field>
         )}
-      </Section>
 
-      {/* CHOROBY */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('choroby')}>
-          <Chevron $open={data.choroby.enabled}>▶</Chevron>
-          <SectionName>Choroby i zabiegi</SectionName>
-        </SectionHeader>
-        {data.choroby.enabled && (
-          <SectionBody>
-            <Field>
-              <label>Objawy choroby obecnej</label>
-              <textarea rows={3} value={data.choroby.objawy_obecnej} onChange={(e) => update('choroby', 'objawy_obecnej', e.target.value)} />
-            </Field>
-
-            <SmallTitle>Choroby przebyte</SmallTitle>
+        <SectionTitle>Alergie</SectionTitle>
+        <QuestionRow>
+          <span>Czy występują alergie?</span>
+          <ToggleCheckbox checked={kw.alergie.wystepuja} onChange={() => kwUpdate('alergie', 'wystepuja', !kw.alergie.wystepuja)} label={kw.alergie.wystepuja ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.alergie.wystepuja && (
+          <>
             <DataTable>
-              <thead>
-                <tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr>
-              </thead>
+              <thead><tr><th>Alergia</th><th>Opis reakcji</th><th></th></tr></thead>
               <tbody>
-                {data.choroby.przebyte.map((row, i) => (
+                {kw.alergie.wpisy.map((row, i) => (
                   <tr key={i}>
-                    <td><input value={row.choroba} onChange={(e) => updateTableRow('choroby', 'przebyte', i, 'choroba', e.target.value)} /></td>
-                    <td><input value={row.od_kiedy} onChange={(e) => updateTableRow('choroby', 'przebyte', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
-                    <td><input value={row.leczenie} onChange={(e) => updateTableRow('choroby', 'przebyte', i, 'leczenie', e.target.value)} /></td>
-                    <td><RemoveBtn onClick={() => removeTableRow('choroby', 'przebyte', i)}>×</RemoveBtn></td>
+                    <td><input value={row.alergia} onChange={(e) => kwUpdateRow('alergie', 'wpisy', i, 'alergia', e.target.value)} /></td>
+                    <td><input value={row.opis} onChange={(e) => kwUpdateRow('alergie', 'wpisy', i, 'opis', e.target.value)} /></td>
+                    <td><RemoveBtn onClick={() => kwRemoveRow('alergie', 'wpisy', i)}>×</RemoveBtn></td>
                   </tr>
                 ))}
               </tbody>
             </DataTable>
-            <AddRowBtn onClick={() => addTableRow('choroby', 'przebyte', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</AddRowBtn>
+            <AddRowBtn onClick={() => kwAddRow('alergie', 'wpisy', { alergia: '', opis: '' })}>+ Dodaj</AddRowBtn>
+          </>
+        )}
 
-            <SmallTitle>Choroby zakaźne</SmallTitle>
+        <SectionTitle>Styl życia</SectionTitle>
+        <QuestionRow>
+          <span>Palenie tytoniu</span>
+          <ToggleCheckbox checked={kw.styl_zycia.palenie} onChange={() => kwUpdate('styl_zycia', 'palenie', !kw.styl_zycia.palenie)} label={kw.styl_zycia.palenie ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.styl_zycia.palenie && (
+          <Field style={{ marginBottom: 12 }}><label>Ile dziennie?</label><input value={kw.styl_zycia.palenie_ile} onChange={(e) => kwUpdate('styl_zycia', 'palenie_ile', e.target.value)} placeholder="np. 10 sztuk" /></Field>
+        )}
+        <QuestionRow>
+          <span>Alkohol</span>
+          <ToggleCheckbox checked={kw.styl_zycia.alkohol} onChange={() => kwUpdate('styl_zycia', 'alkohol', !kw.styl_zycia.alkohol)} label={kw.styl_zycia.alkohol ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.styl_zycia.alkohol && (
+          <Field style={{ marginBottom: 12 }}><label>Ile / jak często?</label><input value={kw.styl_zycia.alkohol_ile} onChange={(e) => kwUpdate('styl_zycia', 'alkohol_ile', e.target.value)} placeholder="np. okazjonalnie" /></Field>
+        )}
+        <QuestionRow>
+          <span>Narkotyki</span>
+          <ToggleCheckbox checked={kw.styl_zycia.narkotyki} onChange={() => kwUpdate('styl_zycia', 'narkotyki', !kw.styl_zycia.narkotyki)} label={kw.styl_zycia.narkotyki ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.styl_zycia.narkotyki && (
+          <>
             <DataTable>
-              <thead>
-                <tr><th>Choroba</th><th>Od kiedy</th><th></th></tr>
-              </thead>
+              <thead><tr><th>Nazwa substancji</th><th>Częstotliwość</th><th></th></tr></thead>
               <tbody>
-                {data.choroby.zakazne.map((row, i) => (
+                {kw.styl_zycia.narkotyki_wpisy.map((row, i) => (
                   <tr key={i}>
-                    <td><input value={row.choroba} onChange={(e) => updateTableRow('choroby', 'zakazne', i, 'choroba', e.target.value)} /></td>
-                    <td><input value={row.od_kiedy} onChange={(e) => updateTableRow('choroby', 'zakazne', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
-                    <td><RemoveBtn onClick={() => removeTableRow('choroby', 'zakazne', i)}>×</RemoveBtn></td>
+                    <td><input value={row.nazwa} onChange={(e) => kwUpdateRow('styl_zycia', 'narkotyki_wpisy', i, 'nazwa', e.target.value)} /></td>
+                    <td><input value={row.czestotliwosc} onChange={(e) => kwUpdateRow('styl_zycia', 'narkotyki_wpisy', i, 'czestotliwosc', e.target.value)} /></td>
+                    <td><RemoveBtn onClick={() => kwRemoveRow('styl_zycia', 'narkotyki_wpisy', i)}>×</RemoveBtn></td>
                   </tr>
                 ))}
               </tbody>
             </DataTable>
-            <AddRowBtn onClick={() => addTableRow('choroby', 'zakazne', { choroba: '', od_kiedy: '' })}>+ Dodaj</AddRowBtn>
-
-            <SmallTitle>Przebyte zabiegi operacyjne</SmallTitle>
-            <DataTable>
-              <thead>
-                <tr><th>Zabieg</th><th>Data</th><th></th></tr>
-              </thead>
-              <tbody>
-                {data.choroby.zabiegi.map((row, i) => (
-                  <tr key={i}>
-                    <td><input value={row.zabieg} onChange={(e) => updateTableRow('choroby', 'zabiegi', i, 'zabieg', e.target.value)} /></td>
-                    <td><input type="date" value={row.data} onChange={(e) => updateTableRow('choroby', 'zabiegi', i, 'data', e.target.value)} /></td>
-                    <td><RemoveBtn onClick={() => removeTableRow('choroby', 'zabiegi', i)}>×</RemoveBtn></td>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTable>
-            <AddRowBtn onClick={() => addTableRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</AddRowBtn>
-            <SaveSectionBtn onClick={() => openSaveModal('choroby')} disabled={savingSection === 'choroby'}>
-              {savingSection === 'choroby' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
+            <AddRowBtn onClick={() => kwAddRow('styl_zycia', 'narkotyki_wpisy', { nazwa: '', czestotliwosc: '' })}>+ Dodaj</AddRowBtn>
+          </>
         )}
-      </Section>
+        <Row2 style={{ marginTop: 16 }}>
+          <Field>
+            <label>Aktywność fizyczna</label>
+            <textarea rows={2} value={kw.styl_zycia.aktywnosc} onChange={(e) => kwUpdate('styl_zycia', 'aktywnosc', e.target.value)} />
+          </Field>
+          <Field>
+            <label>Dieta / odżywianie</label>
+            <textarea rows={2} value={kw.styl_zycia.dieta} onChange={(e) => kwUpdate('styl_zycia', 'dieta', e.target.value)} />
+          </Field>
+        </Row2>
 
-      {/* PARAMETRY */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('parametry')}>
-          <Chevron $open={data.parametry.enabled}>▶</Chevron>
-          <SectionName>Parametry</SectionName>
-        </SectionHeader>
-        {data.parametry.enabled && (
-          <SectionBody>
-            <Row3>
-              <Field>
-                <label>Wzrost (cm)</label>
-                <input type="number" min="0" value={data.parametry.wzrost} onChange={(e) => update('parametry', 'wzrost', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Masa ciała (kg)</label>
-                <input type="number" min="0" step="0.1" value={data.parametry.masa} onChange={(e) => update('parametry', 'masa', e.target.value)} />
-              </Field>
-              <Field>
-                <label>BMI</label>
-                <input value={data.parametry.bmi} readOnly style={{ background: '#f0f0f0' }} />
-              </Field>
-            </Row3>
-            <Row2>
-              <Field>
-                <label>Obwód głowy (cm)</label>
-                <input type="number" min="0" value={data.parametry.obwod_glowy} onChange={(e) => update('parametry', 'obwod_glowy', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Obwód klatki piersiowej (cm)</label>
-                <input type="number" min="0" value={data.parametry.obwod_klatki} onChange={(e) => update('parametry', 'obwod_klatki', e.target.value)} />
-              </Field>
-            </Row2>
-            <SaveSectionBtn onClick={() => openSaveModal('parametry')} disabled={savingSection === 'parametry'}>
-              {savingSection === 'parametry' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
-        )}
-      </Section>
-
-      {/* OZNAKI ŻYCIA */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('oznaki_zycia')}>
-          <Chevron $open={data.oznaki_zycia.enabled}>▶</Chevron>
-          <SectionName>Oznaki życia</SectionName>
-        </SectionHeader>
-        {data.oznaki_zycia.enabled && (
-          <SectionBody>
-            <Row3>
-              <Field>
-                <label>Temperatura (°C)</label>
-                <input type="number" step="0.1" min="30" max="45" value={data.oznaki_zycia.temperatura} onChange={(e) => update('oznaki_zycia', 'temperatura', e.target.value)} />
-              </Field>
-              <Field>
-                <label>CTK skurczowe (mmHg)</label>
-                <input type="number" min="0" value={data.oznaki_zycia.ctk_skurczowe} onChange={(e) => update('oznaki_zycia', 'ctk_skurczowe', e.target.value)} />
-              </Field>
-              <Field>
-                <label>CTK rozkurczowe (mmHg)</label>
-                <input type="number" min="0" value={data.oznaki_zycia.ctk_rozkurczowe} onChange={(e) => update('oznaki_zycia', 'ctk_rozkurczowe', e.target.value)} />
-              </Field>
-            </Row3>
-            <Row3>
-              <Field>
-                <label>Tętno (ud./min)</label>
-                <input type="number" min="0" value={data.oznaki_zycia.tetno} onChange={(e) => update('oznaki_zycia', 'tetno', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Oddech (odd./min)</label>
-                <input type="number" min="0" value={data.oznaki_zycia.oddech} onChange={(e) => update('oznaki_zycia', 'oddech', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Rodzaj oddechu</label>
-                <ACInput value={data.oznaki_zycia.rodzaj_oddechu} onChange={(v) => update('oznaki_zycia', 'rodzaj_oddechu', v)} options={RODZAJE_ODDECHU} placeholder="Wpisz rodzaj..." />
-              </Field>
-            </Row3>
-            <SaveSectionBtn onClick={() => openSaveModal('oznaki_zycia')} disabled={savingSection === 'oznaki_zycia'}>
-              {savingSection === 'oznaki_zycia' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
-        )}
-      </Section>
-
-      {/* OCENA BÓLU */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('ocena_bolu')}>
-          <Chevron $open={data.ocena_bolu.enabled}>▶</Chevron>
-          <SectionName>Ocena bólu</SectionName>
-        </SectionHeader>
-        {data.ocena_bolu.enabled && (
-          <SectionBody>
-            <DataTable>
-              <thead>
-                <tr><th>Kategoria</th><th>Lokalizacja</th><th>Częstotliwość</th><th>Intensywność (0-10)</th><th></th></tr>
-              </thead>
-              <tbody>
-                {data.ocena_bolu.wpisy.map((row, i) => (
-                  <tr key={i}>
-                    <td>
-                      <select value={row.kategoria} onChange={(e) => updateTableRow('ocena_bolu', 'wpisy', i, 'kategoria', e.target.value)}>
-                        <option value="">— wybierz —</option>
-                        <option>ostry</option>
-                        <option>przewlekły</option>
-                        <option>nawracający</option>
-                      </select>
-                    </td>
-                    <td><input value={row.lokalizacja} onChange={(e) => updateTableRow('ocena_bolu', 'wpisy', i, 'lokalizacja', e.target.value)} /></td>
-                    <td>
-                      <select value={row.czestotliwosc} onChange={(e) => updateTableRow('ocena_bolu', 'wpisy', i, 'czestotliwosc', e.target.value)}>
-                        <option value="">— wybierz —</option>
-                        <option>ciągły</option>
-                        <option>okresowy</option>
-                        <option>sporadyczny</option>
-                      </select>
-                    </td>
-                    <td><input type="number" min="0" max="10" value={row.intensywnosc} onChange={(e) => updateTableRow('ocena_bolu', 'wpisy', i, 'intensywnosc', e.target.value)} /></td>
-                    <td><RemoveBtn onClick={() => removeTableRow('ocena_bolu', 'wpisy', i)}>×</RemoveBtn></td>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTable>
-            <AddRowBtn onClick={() => addTableRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</AddRowBtn>
-            <SaveSectionBtn onClick={() => openSaveModal('ocena_bolu')} disabled={savingSection === 'ocena_bolu'}>
-              {savingSection === 'ocena_bolu' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
-        )}
-      </Section>
-
-      {/* KREW */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('krew')}>
-          <Chevron $open={data.krew.enabled}>▶</Chevron>
-          <SectionName>Krew</SectionName>
-        </SectionHeader>
-        {data.krew.enabled && (
-          <SectionBody>
-            <Row3>
-              <Field>
-                <label>HBs Ag</label>
-                <select value={data.krew.hbs} onChange={(e) => update('krew', 'hbs', e.target.value)}>
-                  <option>nie badano</option>
-                  <option>dodatni</option>
-                  <option>ujemny</option>
-                </select>
-              </Field>
-              <Field>
-                <label>HIV</label>
-                <select value={data.krew.hiv} onChange={(e) => update('krew', 'hiv', e.target.value)}>
-                  <option>nie badano</option>
-                  <option>dodatni</option>
-                  <option>ujemny</option>
-                </select>
-              </Field>
-              <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
-                <ToggleCheckbox checked={data.krew.transfuzje} onChange={() => update('krew', 'transfuzje', !data.krew.transfuzje)} label="Transfuzje krwi" />
-              </Field>
-            </Row3>
-            {data.krew.transfuzje && (
-              <Field>
-                <label>Reakcje potransfuzyjne</label>
-                <textarea rows={2} value={data.krew.reakcje} onChange={(e) => update('krew', 'reakcje', e.target.value)} />
-              </Field>
-            )}
-            <SaveSectionBtn onClick={() => openSaveModal('krew')} disabled={savingSection === 'krew'}>
-              {savingSection === 'krew' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
-        )}
-      </Section>
-
-      {/* ALERGIE */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('alergie')}>
-          <Chevron $open={data.alergie.enabled}>▶</Chevron>
-          <SectionName>Alergie</SectionName>
-        </SectionHeader>
-        {data.alergie.enabled && (
-          <SectionBody>
-            <QuestionRow>
-              <span>Czy występują alergie?</span>
-              <ToggleCheckbox checked={data.alergie.wystepuja} onChange={() => update('alergie', 'wystepuja', !data.alergie.wystepuja)} label={data.alergie.wystepuja ? 'Tak' : 'Nie'} />
-            </QuestionRow>
-            {data.alergie.wystepuja && (
-              <>
-                <DataTable>
-                  <thead>
-                    <tr><th>Alergia</th><th>Opis reakcji</th><th></th></tr>
-                  </thead>
-                  <tbody>
-                    {data.alergie.wpisy.map((row, i) => (
-                      <tr key={i}>
-                        <td><input value={row.alergia} onChange={(e) => updateTableRow('alergie', 'wpisy', i, 'alergia', e.target.value)} /></td>
-                        <td><input value={row.opis} onChange={(e) => updateTableRow('alergie', 'wpisy', i, 'opis', e.target.value)} /></td>
-                        <td><RemoveBtn onClick={() => removeTableRow('alergie', 'wpisy', i)}>×</RemoveBtn></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-                <AddRowBtn onClick={() => addTableRow('alergie', 'wpisy', { alergia: '', opis: '' })}>+ Dodaj</AddRowBtn>
-              </>
-            )}
-            <SaveSectionBtn onClick={() => openSaveModal('alergie')} disabled={savingSection === 'alergie'}>
-              {savingSection === 'alergie' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
-        )}
-      </Section>
-
-      {/* STYL ŻYCIA */}
-      <Section>
-        <SectionHeader onClick={() => toggleSection('styl_zycia')}>
-          <Chevron $open={data.styl_zycia.enabled}>▶</Chevron>
-          <SectionName>Styl życia</SectionName>
-        </SectionHeader>
-        {data.styl_zycia.enabled && (
-          <SectionBody>
-            <QuestionRow>
-              <span>Palenie tytoniu</span>
-              <ToggleCheckbox checked={data.styl_zycia.palenie} onChange={() => update('styl_zycia', 'palenie', !data.styl_zycia.palenie)} label={data.styl_zycia.palenie ? 'Tak' : 'Nie'} />
-            </QuestionRow>
-            {data.styl_zycia.palenie && (
-              <Field style={{ marginBottom: 12 }}>
-                <label>Ile dziennie?</label>
-                <input value={data.styl_zycia.palenie_ile} onChange={(e) => update('styl_zycia', 'palenie_ile', e.target.value)} placeholder="np. 10 sztuk" />
-              </Field>
-            )}
-
-            <QuestionRow>
-              <span>Alkohol</span>
-              <ToggleCheckbox checked={data.styl_zycia.alkohol} onChange={() => update('styl_zycia', 'alkohol', !data.styl_zycia.alkohol)} label={data.styl_zycia.alkohol ? 'Tak' : 'Nie'} />
-            </QuestionRow>
-            {data.styl_zycia.alkohol && (
-              <Field style={{ marginBottom: 12 }}>
-                <label>Ile / jak często?</label>
-                <input value={data.styl_zycia.alkohol_ile} onChange={(e) => update('styl_zycia', 'alkohol_ile', e.target.value)} placeholder="np. okazjonalnie" />
-              </Field>
-            )}
-
-            <QuestionRow>
-              <span>Narkotyki</span>
-              <ToggleCheckbox checked={data.styl_zycia.narkotyki} onChange={() => update('styl_zycia', 'narkotyki', !data.styl_zycia.narkotyki)} label={data.styl_zycia.narkotyki ? 'Tak' : 'Nie'} />
-            </QuestionRow>
-            {data.styl_zycia.narkotyki && (
-              <>
-                <DataTable>
-                  <thead>
-                    <tr><th>Nazwa substancji</th><th>Częstotliwość</th><th></th></tr>
-                  </thead>
-                  <tbody>
-                    {data.styl_zycia.narkotyki_wpisy.map((row, i) => (
-                      <tr key={i}>
-                        <td><input value={row.nazwa} onChange={(e) => updateTableRow('styl_zycia', 'narkotyki_wpisy', i, 'nazwa', e.target.value)} /></td>
-                        <td><input value={row.czestotliwosc} onChange={(e) => updateTableRow('styl_zycia', 'narkotyki_wpisy', i, 'czestotliwosc', e.target.value)} /></td>
-                        <td><RemoveBtn onClick={() => removeTableRow('styl_zycia', 'narkotyki_wpisy', i)}>×</RemoveBtn></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-                <AddRowBtn onClick={() => addTableRow('styl_zycia', 'narkotyki_wpisy', { nazwa: '', czestotliwosc: '' })}>+ Dodaj</AddRowBtn>
-              </>
-            )}
-
-            <Row2 style={{ marginTop: 16 }}>
-              <Field>
-                <label>Aktywność fizyczna</label>
-                <textarea rows={2} value={data.styl_zycia.aktywnosc} onChange={(e) => update('styl_zycia', 'aktywnosc', e.target.value)} />
-              </Field>
-              <Field>
-                <label>Dieta / odżywianie</label>
-                <textarea rows={2} value={data.styl_zycia.dieta} onChange={(e) => update('styl_zycia', 'dieta', e.target.value)} />
-              </Field>
-            </Row2>
-            <SaveSectionBtn onClick={() => openSaveModal('styl_zycia')} disabled={savingSection === 'styl_zycia'}>
-              {savingSection === 'styl_zycia' ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </SaveSectionBtn>
-          </SectionBody>
-        )}
-      </Section>
-
-      {/* MODAL DATA + GODZINA */}
-      {saveModal && (
-        <ModalOverlay onClick={() => setSaveModal(null)}>
-          <ModalBox onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>Potwierdź zapis</ModalTitle>
-            <ModalField>
-              <label>Data</label>
-              <input type="date" value={saveDate} onChange={(e) => setSaveDate(e.target.value)} />
-            </ModalField>
-            <ModalField>
-              <label>Godzina</label>
-              <input type="time" value={saveTime} onChange={(e) => setSaveTime(e.target.value)} />
-            </ModalField>
-            <ModalButtons>
-              <ModalCancel type="button" onClick={() => setSaveModal(null)}>Anuluj</ModalCancel>
-              <ModalConfirm type="button" onClick={handleConfirmSave} disabled={!saveDate || !saveTime}>
-                Potwierdź i zapisz
-              </ModalConfirm>
-            </ModalButtons>
-          </ModalBox>
-        </ModalOverlay>
-      )}
+        <SaveBar>
+          <SaveBtn onClick={handleSave} disabled={saving}>
+            {saving ? 'Zapisywanie...' : 'Zapisz zmiany'}
+          </SaveBtn>
+        </SaveBar>
+      </FormArea>
     </Wrapper>
   );
 }
@@ -614,79 +522,45 @@ const Title = styled.h2`
   margin-bottom: 1.5rem;
 `;
 
-const Section = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  margin-bottom: 1rem;
-  overflow: hidden;
-`;
-
-const SectionHeader = styled.div`
+const FormArea = styled.div`
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  cursor: pointer;
-  transition: background 0.2s;
-  user-select: none;
-  &:hover { background: #f8f9fa; }
+  flex-direction: column;
+  gap: 0.75rem;
 `;
 
-const Chevron = styled.span`
-  display: inline-block;
-  font-size: 0.75rem;
-  color: #888;
-  transition: transform 0.25s;
-  transform: rotate(${(p) => (p.$open ? '90deg' : '0deg')});
+const SectionTitle = styled.h3`
+  font-size: 0.95rem;
+  color: #2387B6;
+  border-bottom: 2px solid #2387B6;
+  padding-bottom: 4px;
+  margin: 0.5rem 0 0;
 `;
 
-const SectionName = styled.span`
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #1a1a2e;
-`;
-
-const SectionBody = styled.div`
-  padding: 0 20px 20px;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 16px;
-`;
-
-const SmallTitle = styled.h4`
-  font-size: 0.9rem;
-  color: #555;
-  margin: 16px 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const QuestionRow = styled.div`
+const Row = styled.div`
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 0;
-  span {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #333;
-  }
-`;
-
-const Row3 = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-  @media (max-width: 768px) { grid-template-columns: 1fr; }
+  gap: 1rem;
 `;
 
 const Row2 = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-  @media (max-width: 768px) { grid-template-columns: 1fr; }
+  gap: 1rem;
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+`;
+
+const Row3 = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+`;
+
+const RadioGroup = styled.div`
+  display: flex;
+  gap: 1.5rem;
+  padding-top: 4px;
+  label { display: flex; align-items: center; gap: 4px; font-size: 0.9rem; cursor: pointer; }
+  input[type="radio"] { width: auto; margin: 0; }
 `;
 
 const Field = styled.div`
@@ -696,10 +570,8 @@ const Field = styled.div`
 
   label {
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 500;
     color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
   }
 
   input, select, textarea {
@@ -708,74 +580,64 @@ const Field = styled.div`
     border-radius: 8px;
     font-size: 0.9rem;
     font-family: inherit;
-    transition: border 0.2s;
+    transition: border-color 0.2s;
+    resize: vertical;
     &:focus { outline: none; border-color: #2387B6; }
   }
+`;
 
-  textarea { resize: vertical; }
+const SmallTitle = styled.h4`
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #555;
+  margin: 10px 0 4px;
+`;
+
+const QuestionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+  span { font-size: 0.9rem; font-weight: 500; color: #333; }
 `;
 
 const DataTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 4px;
-
-  th {
-    text-align: left;
-    font-size: 0.78rem;
-    color: #777;
-    text-transform: uppercase;
-    padding: 6px 4px;
-    border-bottom: 2px solid #e9ecef;
-  }
-
-  td {
-    padding: 4px;
-    input, select {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1.5px solid #e0e0e0;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-family: inherit;
-      &:focus { outline: none; border-color: #2387B6; }
-    }
+  th { text-align: left; font-size: 0.75rem; color: #777; text-transform: uppercase; padding: 5px 4px; border-bottom: 2px solid #e9ecef; }
+  td { padding: 3px 4px;
+    input, select { width: 100%; padding: 5px 7px; border: 1.5px solid #e0e0e0; border-radius: 6px; font-size: 0.83rem; font-family: inherit; &:focus { outline: none; border-color: #2387B6; } }
   }
 `;
 
 const RemoveBtn = styled.button`
-  background: none;
-  border: none;
-  color: #ef4444;
-  font-size: 1.3rem;
-  cursor: pointer;
-  padding: 0 6px;
-  line-height: 1;
+  background: none; border: none; color: #ef4444; font-size: 1.2rem; cursor: pointer; padding: 0 5px; line-height: 1;
   &:hover { color: #dc2626; }
 `;
 
 const AddRowBtn = styled.button`
-  background: none;
-  border: 1px dashed #2387B6;
-  color: #2387B6;
-  border-radius: 6px;
-  padding: 4px 14px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  margin-top: 4px;
+  background: none; border: 1px dashed #2387B6; color: #2387B6; border-radius: 6px; padding: 3px 12px; font-size: 0.8rem; cursor: pointer; margin-top: 4px;
   &:hover { background: #f0f7fb; }
 `;
 
-const SaveSectionBtn = styled.button`
+const SaveBar = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid #e0e0e0;
+`;
+
+const SaveBtn = styled.button`
+  padding: 12px 36px;
+  border: none;
+  border-radius: 8px;
   background: #2387B6;
   color: white;
-  border: none;
-  padding: 10px 28px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 16px;
   transition: all 0.2s;
   &:hover { background: #1b6d94; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -783,119 +645,25 @@ const SaveSectionBtn = styled.button`
 
 const ACWrap = styled.div`
   position: relative;
-  input {
-    width: 100%;
-    padding: 8px 10px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    transition: border 0.2s;
-    &:focus { outline: none; border-color: #2387B6; }
-  }
+  input { width: 100%; box-sizing: border-box; }
 `;
 
 const ACDrop = styled.div`
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   background: white;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 0 0 8px 8px;
   max-height: 180px;
   overflow-y: auto;
-  z-index: 20;
+  z-index: 10;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 `;
 
 const ACOpt = styled.div`
   padding: 8px 12px;
-  cursor: pointer;
   font-size: 0.88rem;
-  &:hover { background: #f0f7fb; }
-`;
-
-/* ─── Modal styled components ─── */
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const ModalBox = styled.div`
-  background: white;
-  border-radius: 14px;
-  padding: 28px 32px;
-  min-width: 360px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
-`;
-
-const ModalTitle = styled.h3`
-  font-size: 1.15rem;
-  color: #1a1a2e;
-  margin: 0 0 20px;
-`;
-
-const ModalField = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 14px;
-
-  label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-
-  input {
-    padding: 8px 10px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    transition: border 0.2s;
-    &:focus { outline: none; border-color: #2387B6; }
-  }
-`;
-
-const ModalButtons = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-`;
-
-const ModalCancel = styled.button`
-  padding: 9px 22px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  background: white;
-  color: #555;
-  font-size: 0.9rem;
-  font-weight: 600;
   cursor: pointer;
-  &:hover { background: #f5f5f5; }
-`;
-
-const ModalConfirm = styled.button`
-  padding: 9px 22px;
-  border: none;
-  border-radius: 8px;
-  background: #2387B6;
-  color: white;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  &:hover { background: #1b6d94; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover { background: #e8f4f8; color: #2387B6; }
 `;

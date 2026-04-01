@@ -90,7 +90,7 @@ export default function DashboardPage() {
   const renderSection = () => {
     switch (activeSection) {
       case 'wywiad':
-        return <KartaWywiadu patient={selectedPatient} />;
+        return <KartaWywiadu patient={selectedPatient} onPatientUpdated={fetchPatients} />;
       case 'oceny':
         return <SectionPlaceholder>Ocena układów — w budowie</SectionPlaceholder>;
       case 'diagnozy':
