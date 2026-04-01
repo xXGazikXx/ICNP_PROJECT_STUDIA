@@ -26,6 +26,8 @@ const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
 const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-Stokesa', 'Kussmaula', 'Biota', 'inny'];
 const TYPY_KONTAKTU = ['słowny', 'pozasłowny', 'pisemny'];
 const GRUPY_KRWI = ['A Rh+', 'A Rh-', 'B Rh+', 'B Rh-', 'AB Rh+', 'AB Rh-', '0 Rh+', '0 Rh-'];
+const WYZNANIA = ['rzymskokatolickie', 'prawosławne', 'ewangelickie', 'muzułmańskie', 'judaistyczne', 'buddyjskie', 'hinduistyczne', 'ateista', 'bezwyznaniowy', 'inne'];
+const SPRZET_POMOCNICZY = ['okulary', 'soczewki kontaktowe', 'aparat słuchowy', 'proteza kończyny', 'proteza zębowa', 'wózek inwalidzki', 'kule', 'balkonik', 'laska', 'inne'];
 
 function AutocompleteInput({ value, onChange, options, placeholder, name }) {
   const [open, setOpen] = useState(false);
@@ -91,6 +93,7 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
         nazwisko_panienskie: dp.nazwisko_panienskie || '',
         kraj_urodzenia: dp.kraj_urodzenia || '',
         miejsce_urodzenia: dp.miejsce_urodzenia || '',
+        wyznanie: dp.wyznanie || '', opieka_duszpasterska: dp.opieka_duszpasterska || false,
         kraj_zamieszkania: adr.kraj || '', wojewodztwo: adr.wojewodztwo || '',
         powiat: adr.powiat || '', miejscowosc: adr.miejscowosc || '',
         kod_pocztowy: adr.kod_pocztowy || '', ulica: adr.ulica || '',
@@ -117,7 +120,8 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
       typ_dokumentu: 'PESEL',
       imie: '', nazwisko: '', pesel: '', plec: '', data_urodzenia: '', wiek: '',
       numer_ksiegi_glownej: '', nazwisko_panienskie: '', kraj_urodzenia: '',
-      miejsce_urodzenia: '', kraj_zamieszkania: '', wojewodztwo: '', powiat: '',
+      miejsce_urodzenia: '', wyznanie: '', opieka_duszpasterska: false,
+      kraj_zamieszkania: '', wojewodztwo: '', powiat: '',
       miejscowosc: '', kod_pocztowy: '', ulica: '', nr_domu: '', nr_mieszkania: '',
       stan_cywilny: '', wyksztalcenie: '', zawod_wykonywany: '',
       opiekun_imie: '', opiekun_nazwisko: '', opiekun_telefon: '', opiekun_pokrewienstwo: '',
@@ -137,7 +141,9 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
     const kw = editData?.karta_wywiadu || {};
     return {
       kontakt: { typ: kw.kontakt?.typ || '', logiczny: kw.kontakt?.logiczny || false, zachowany: kw.kontakt?.zachowany || false, brak_kontaktu: kw.kontakt?.brak_kontaktu || false },
-      choroby: { rozpoznanie_glowne: kw.choroby?.rozpoznanie_glowne || '', przewlekle: kw.choroby?.przewlekle || [{ choroba: '', od_kiedy: '', leczenie: '' }], przebyte_enabled: kw.choroby?.przebyte_enabled || false, przebyte: kw.choroby?.przebyte || [], zabiegi_enabled: kw.choroby?.zabiegi_enabled || false, zabiegi: kw.choroby?.zabiegi || [] },
+      choroby: { rozpoznanie_glowne: kw.choroby?.rozpoznanie_glowne || '', przewlekle_enabled: kw.choroby?.przewlekle_enabled || false, przewlekle: kw.choroby?.przewlekle || [], przebyte_enabled: kw.choroby?.przebyte_enabled || false, przebyte: kw.choroby?.przebyte || [], zabiegi_enabled: kw.choroby?.zabiegi_enabled || false, zabiegi: kw.choroby?.zabiegi || [] },
+      leki: { enabled: kw.leki?.enabled || false, wpisy: kw.leki?.wpisy || [] },
+      sprzet: { enabled: kw.sprzet?.enabled || false, wpisy: kw.sprzet?.wpisy || [] },
       parametry: { wzrost: kw.parametry?.wzrost || '', masa: kw.parametry?.masa || '', bmi: kw.parametry?.bmi || '', obwod_glowy: kw.parametry?.obwod_glowy || '', obwod_klatki: kw.parametry?.obwod_klatki || '' },
       oznaki_zycia: { temperatura: kw.oznaki_zycia?.temperatura || '', ctk_skurczowe: kw.oznaki_zycia?.ctk_skurczowe || '', ctk_rozkurczowe: kw.oznaki_zycia?.ctk_rozkurczowe || '', tetno: kw.oznaki_zycia?.tetno || '', oddech: kw.oznaki_zycia?.oddech || '', rodzaj_oddechu: kw.oznaki_zycia?.rodzaj_oddechu || 'prawidłowy' },
       ocena_bolu: { wystepuje: kw.ocena_bolu?.wystepuje || false, wpisy: kw.ocena_bolu?.wpisy || [] },
@@ -271,6 +277,8 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
           nazwisko_panienskie: form.nazwisko_panienskie || null,
           kraj_urodzenia: form.kraj_urodzenia || null,
           miejsce_urodzenia: form.miejsce_urodzenia || null,
+          wyznanie: form.wyznanie || null,
+          opieka_duszpasterska: form.opieka_duszpasterska || false,
         },
         adres: {
           kraj: form.kraj_zamieszkania || null,
@@ -399,12 +407,19 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
             </Field>
           </Row3>
 
-          <Row>
+          <Row3>
             <Field>
               <label>Miejsce urodzenia</label>
               <input name="miejsce_urodzenia" value={form.miejsce_urodzenia} onChange={handleChange} />
             </Field>
-          </Row>
+            <Field>
+              <label>Wyznanie</label>
+              <AutocompleteInput name="wyznanie" value={form.wyznanie || ''} onChange={handleChange} options={WYZNANIA} placeholder="Wpisz wyznanie..." />
+            </Field>
+            <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+              <ToggleCheckbox checked={!!form.opieka_duszpasterska} onChange={() => setForm((prev) => ({ ...prev, opieka_duszpasterska: !prev.opieka_duszpasterska }))} label="Opieka duszpasterska" />
+            </Field>
+          </Row3>
 
           <SectionTitle>Adres zamieszkania</SectionTitle>
 
@@ -577,21 +592,28 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
             <label>Rozpoznanie główne</label>
             <textarea rows={3} value={kw.choroby.rozpoznanie_glowne} onChange={(e) => kwUpdate('choroby', 'rozpoznanie_glowne', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
-          <KWSmallTitle>Choroby przewlekłe</KWSmallTitle>
-          <KWTable>
-            <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
-            <tbody>
-              {kw.choroby.przewlekle.map((row, i) => (
-                <tr key={i}>
-                  <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'choroba', e.target.value)} /></td>
-                  <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
-                  <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'leczenie', e.target.value)} /></td>
-                  <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'przewlekle', i)}>×</KWRemoveBtn></td>
-                </tr>
-              ))}
-            </tbody>
-          </KWTable>
-          <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'przewlekle', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</KWAddBtn>
+          <KWQuestionRow>
+            <span>Choroby przewlekłe</span>
+            <ToggleCheckbox checked={kw.choroby.przewlekle_enabled} onChange={() => kwUpdate('choroby', 'przewlekle_enabled', !kw.choroby.przewlekle_enabled)} label={kw.choroby.przewlekle_enabled ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.choroby.przewlekle_enabled && (
+            <>
+              <KWTable>
+                <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
+                <tbody>
+                  {kw.choroby.przewlekle.map((row, i) => (
+                    <tr key={i}>
+                      <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'choroba', e.target.value)} /></td>
+                      <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                      <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'leczenie', e.target.value)} /></td>
+                      <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'przewlekle', i)}>×</KWRemoveBtn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </KWTable>
+              <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'przewlekle', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</KWAddBtn>
+            </>
+          )}
           <KWQuestionRow>
             <span>Przebyte choroby</span>
             <ToggleCheckbox checked={kw.choroby.przebyte_enabled} onChange={() => kwUpdate('choroby', 'przebyte_enabled', !kw.choroby.przebyte_enabled)} label={kw.choroby.przebyte_enabled ? 'Tak' : 'Nie'} />
@@ -632,6 +654,53 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
                 </tbody>
               </KWTable>
               <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</KWAddBtn>
+            </>
+          )}
+
+          <SectionTitle>Leki</SectionTitle>
+          <KWQuestionRow>
+            <span>Leki na stałe</span>
+            <ToggleCheckbox checked={kw.leki.enabled} onChange={() => kwUpdate('leki', 'enabled', !kw.leki.enabled)} label={kw.leki.enabled ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.leki.enabled && (
+            <>
+              <KWTable>
+                <thead><tr><th>Nazwa</th><th>Dawka</th><th>Ile razy</th><th>Doraźnie</th><th></th></tr></thead>
+                <tbody>
+                  {kw.leki.wpisy.map((row, i) => (
+                    <tr key={i}>
+                      <td><input value={row.nazwa} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'nazwa', e.target.value)} /></td>
+                      <td><input value={row.dawka} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'dawka', e.target.value)} /></td>
+                      <td><input value={row.ile_razy} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'ile_razy', e.target.value)} /></td>
+                      <td style={{ textAlign: 'center' }}><input type="checkbox" checked={!!row.doraznie} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'doraznie', e.target.checked)} style={{ width: 'auto' }} /></td>
+                      <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('leki', 'wpisy', i)}>×</KWRemoveBtn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </KWTable>
+              <KWAddBtn type="button" onClick={() => kwAddRow('leki', 'wpisy', { nazwa: '', dawka: '', ile_razy: '', doraznie: false })}>+ Dodaj</KWAddBtn>
+            </>
+          )}
+
+          <SectionTitle>Sprzęt</SectionTitle>
+          <KWQuestionRow>
+            <span>Czy korzysta ze sprzętu pomocniczego?</span>
+            <ToggleCheckbox checked={kw.sprzet.enabled} onChange={() => kwUpdate('sprzet', 'enabled', !kw.sprzet.enabled)} label={kw.sprzet.enabled ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.sprzet.enabled && (
+            <>
+              <KWTable>
+                <thead><tr><th>Sprzęt</th><th></th></tr></thead>
+                <tbody>
+                  {kw.sprzet.wpisy.map((row, i) => (
+                    <tr key={i}>
+                      <td><AutocompleteInput name={`__kw_sprzet_${i}`} value={row.nazwa} onChange={(e) => kwUpdateRow('sprzet', 'wpisy', i, 'nazwa', e.target.value)} options={SPRZET_POMOCNICZY} placeholder="Wpisz sprzęt..." /></td>
+                      <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('sprzet', 'wpisy', i)}>×</KWRemoveBtn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </KWTable>
+              <KWAddBtn type="button" onClick={() => kwAddRow('sprzet', 'wpisy', { nazwa: '' })}>+ Dodaj</KWAddBtn>
             </>
           )}
 

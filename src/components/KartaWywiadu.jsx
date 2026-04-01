@@ -23,6 +23,8 @@ const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
 const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-Stokesa', 'Kussmaula', 'Biota', 'inny'];
 const TYPY_KONTAKTU = ['słowny', 'pozasłowny', 'pisemny'];
 const GRUPY_KRWI = ['A Rh+', 'A Rh-', 'B Rh+', 'B Rh-', 'AB Rh+', 'AB Rh-', '0 Rh+', '0 Rh-'];
+const WYZNANIA = ['rzymskokatolickie', 'prawosławne', 'ewangelickie', 'muzułmańskie', 'judaistyczne', 'buddyjskie', 'hinduistyczne', 'ateista', 'bezwyznaniowy', 'inne'];
+const SPRZET_POMOCNICZY = ['okulary', 'soczewki kontaktowe', 'aparat słuchowy', 'proteza kończyny', 'proteza zębowa', 'wózek inwalidzki', 'kule', 'balkonik', 'laska', 'inne'];
 
 /* ─── Inline Autocomplete ─── */
 function ACInput({ value, onChange, options, placeholder, name }) {
@@ -65,6 +67,7 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
       nazwisko_panienskie: dp.nazwisko_panienskie || '',
       kraj_urodzenia: dp.kraj_urodzenia || '',
       miejsce_urodzenia: dp.miejsce_urodzenia || '',
+      wyznanie: dp.wyznanie || '', opieka_duszpasterska: dp.opieka_duszpasterska || false,
       kraj_zamieszkania: adr.kraj || '', wojewodztwo: adr.wojewodztwo || '',
       powiat: adr.powiat || '', miejscowosc: adr.miejscowosc || '',
       kod_pocztowy: adr.kod_pocztowy || '', ulica: adr.ulica || '',
@@ -90,7 +93,9 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
     const kw = p?.karta_wywiadu || {};
     return {
       kontakt: { typ: kw.kontakt?.typ || '', logiczny: kw.kontakt?.logiczny || false, zachowany: kw.kontakt?.zachowany || false, brak_kontaktu: kw.kontakt?.brak_kontaktu || false },
-      choroby: { rozpoznanie_glowne: kw.choroby?.rozpoznanie_glowne || '', przewlekle: kw.choroby?.przewlekle || [{ choroba: '', od_kiedy: '', leczenie: '' }], przebyte_enabled: kw.choroby?.przebyte_enabled || false, przebyte: kw.choroby?.przebyte || [], zabiegi_enabled: kw.choroby?.zabiegi_enabled || false, zabiegi: kw.choroby?.zabiegi || [] },
+      choroby: { rozpoznanie_glowne: kw.choroby?.rozpoznanie_glowne || '', przewlekle_enabled: kw.choroby?.przewlekle_enabled || false, przewlekle: kw.choroby?.przewlekle || [], przebyte_enabled: kw.choroby?.przebyte_enabled || false, przebyte: kw.choroby?.przebyte || [], zabiegi_enabled: kw.choroby?.zabiegi_enabled || false, zabiegi: kw.choroby?.zabiegi || [] },
+      leki: { enabled: kw.leki?.enabled || false, wpisy: kw.leki?.wpisy || [] },
+      sprzet: { enabled: kw.sprzet?.enabled || false, wpisy: kw.sprzet?.wpisy || [] },
       parametry: { wzrost: kw.parametry?.wzrost || '', masa: kw.parametry?.masa || '', bmi: kw.parametry?.bmi || '', obwod_glowy: kw.parametry?.obwod_glowy || '', obwod_klatki: kw.parametry?.obwod_klatki || '' },
       oznaki_zycia: { temperatura: kw.oznaki_zycia?.temperatura || '', ctk_skurczowe: kw.oznaki_zycia?.ctk_skurczowe || '', ctk_rozkurczowe: kw.oznaki_zycia?.ctk_rozkurczowe || '', tetno: kw.oznaki_zycia?.tetno || '', oddech: kw.oznaki_zycia?.oddech || '', rodzaj_oddechu: kw.oznaki_zycia?.rodzaj_oddechu || 'prawidłowy' },
       ocena_bolu: { wystepuje: kw.ocena_bolu?.wystepuje || false, wpisy: kw.ocena_bolu?.wpisy || [] },
@@ -182,7 +187,7 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
         data_urodzenia: form.data_urodzenia || null,
         wiek: form.wiek ? parseInt(form.wiek, 10) : null,
         numer_ksiegi_glownej: form.numer_ksiegi_glownej || null,
-        dane_personalne: { nazwisko_panienskie: form.nazwisko_panienskie || null, kraj_urodzenia: form.kraj_urodzenia || null, miejsce_urodzenia: form.miejsce_urodzenia || null },
+        dane_personalne: { nazwisko_panienskie: form.nazwisko_panienskie || null, kraj_urodzenia: form.kraj_urodzenia || null, miejsce_urodzenia: form.miejsce_urodzenia || null, wyznanie: form.wyznanie || null, opieka_duszpasterska: form.opieka_duszpasterska || false },
         adres: { kraj: form.kraj_zamieszkania || null, wojewodztwo: form.wojewodztwo || null, powiat: form.powiat || null, miejscowosc: form.miejscowosc || null, kod_pocztowy: form.kod_pocztowy || null, ulica: form.ulica || null, nr_domu: form.nr_domu || null, nr_mieszkania: form.nr_mieszkania || null },
         dane_dodatkowe: { stan_cywilny: form.stan_cywilny || null, wyksztalcenie: form.wyksztalcenie || null, zawod_wykonywany: form.zawod_wykonywany || null, kategoria_pacjenta: form.kategoria_pacjenta || null, oddzial: form.oddzial || null, nr_sali: form.nr_sali || null, data_przyjecia: form.data_przyjecia || null, godz_przyjecia: form.godz_przyjecia || null, tryb_przyjecia: form.tryb_przyjecia || null, lekarz: form.lekarz || null, lekarz_telefon: form.lekarz_telefon || null, przyczyna_przyjecia: form.przyczyna_przyjecia || null, kontakt_imie: form.kontakt_imie || null, kontakt_nazwisko: form.kontakt_nazwisko || null, kontakt_telefon: form.kontakt_telefon || null },
         dane_opiekuna: { imie: form.opiekun_imie || null, nazwisko: form.opiekun_nazwisko || null, telefon: form.opiekun_telefon || null, pokrewienstwo: form.opiekun_pokrewienstwo || null },
@@ -230,6 +235,12 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
           <Field><label>Numer księgi głównej</label><input name="numer_ksiegi_glownej" value={form.numer_ksiegi_glownej} onChange={handleChange} /></Field>
           <Field><label>Kraj urodzenia</label><ACInput name="kraj_urodzenia" value={form.kraj_urodzenia} onChange={handleChange} options={KRAJE} placeholder="Wpisz kraj..." /></Field>
           <Field><label>Miejsce urodzenia</label><input name="miejsce_urodzenia" value={form.miejsce_urodzenia} onChange={handleChange} /></Field>
+        </Row3>
+        <Row3>
+          <Field><label>Wyznanie</label><ACInput name="wyznanie" value={form.wyznanie || ''} onChange={handleChange} options={WYZNANIA} placeholder="Wpisz wyznanie..." /></Field>
+          <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+            <ToggleCheckbox checked={!!form.opieka_duszpasterska} onChange={() => setForm((prev) => ({ ...prev, opieka_duszpasterska: !prev.opieka_duszpasterska }))} label="Opieka duszpasterska" />
+          </Field>
         </Row3>
 
         <SectionTitle>Adres zamieszkania</SectionTitle>
@@ -314,20 +325,28 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
           <textarea rows={3} value={kw.choroby.rozpoznanie_glowne} onChange={(e) => kwUpdate('choroby', 'rozpoznanie_glowne', e.target.value)} />
         </Field>
         <SmallTitle>Choroby przewlekłe</SmallTitle>
-        <DataTable>
-          <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
-          <tbody>
-            {kw.choroby.przewlekle.map((row, i) => (
-              <tr key={i}>
-                <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'choroba', e.target.value)} /></td>
-                <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
-                <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'leczenie', e.target.value)} /></td>
-                <td><RemoveBtn onClick={() => kwRemoveRow('choroby', 'przewlekle', i)}>×</RemoveBtn></td>
-              </tr>
-            ))}
-          </tbody>
-        </DataTable>
-        <AddRowBtn onClick={() => kwAddRow('choroby', 'przewlekle', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</AddRowBtn>
+        <QuestionRow>
+          <span>Choroby przewlekłe</span>
+          <ToggleCheckbox checked={kw.choroby.przewlekle_enabled} onChange={() => kwUpdate('choroby', 'przewlekle_enabled', !kw.choroby.przewlekle_enabled)} label={kw.choroby.przewlekle_enabled ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.choroby.przewlekle_enabled && (
+          <>
+            <DataTable>
+              <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
+              <tbody>
+                {kw.choroby.przewlekle.map((row, i) => (
+                  <tr key={i}>
+                    <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'choroba', e.target.value)} /></td>
+                    <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                    <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'leczenie', e.target.value)} /></td>
+                    <td><RemoveBtn onClick={() => kwRemoveRow('choroby', 'przewlekle', i)}>×</RemoveBtn></td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+            <AddRowBtn onClick={() => kwAddRow('choroby', 'przewlekle', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</AddRowBtn>
+          </>
+        )}
         <QuestionRow>
           <span>Przebyte choroby</span>
           <ToggleCheckbox checked={kw.choroby.przebyte_enabled} onChange={() => kwUpdate('choroby', 'przebyte_enabled', !kw.choroby.przebyte_enabled)} label={kw.choroby.przebyte_enabled ? 'Tak' : 'Nie'} />
@@ -368,6 +387,53 @@ export default function KartaWywiadu({ patient, onPatientUpdated }) {
               </tbody>
             </DataTable>
             <AddRowBtn onClick={() => kwAddRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</AddRowBtn>
+          </>
+        )}
+
+        <SectionTitle>Leki</SectionTitle>
+        <QuestionRow>
+          <span>Leki na stałe</span>
+          <ToggleCheckbox checked={kw.leki.enabled} onChange={() => kwUpdate('leki', 'enabled', !kw.leki.enabled)} label={kw.leki.enabled ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.leki.enabled && (
+          <>
+            <DataTable>
+              <thead><tr><th>Nazwa</th><th>Dawka</th><th>Ile razy</th><th>Doraźnie</th><th></th></tr></thead>
+              <tbody>
+                {kw.leki.wpisy.map((row, i) => (
+                  <tr key={i}>
+                    <td><input value={row.nazwa} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'nazwa', e.target.value)} /></td>
+                    <td><input value={row.dawka} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'dawka', e.target.value)} /></td>
+                    <td><input value={row.ile_razy} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'ile_razy', e.target.value)} /></td>
+                    <td style={{ textAlign: 'center' }}><input type="checkbox" checked={!!row.doraznie} onChange={(e) => kwUpdateRow('leki', 'wpisy', i, 'doraznie', e.target.checked)} style={{ width: 'auto' }} /></td>
+                    <td><RemoveBtn onClick={() => kwRemoveRow('leki', 'wpisy', i)}>×</RemoveBtn></td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+            <AddRowBtn onClick={() => kwAddRow('leki', 'wpisy', { nazwa: '', dawka: '', ile_razy: '', doraznie: false })}>+ Dodaj</AddRowBtn>
+          </>
+        )}
+
+        <SectionTitle>Sprzęt</SectionTitle>
+        <QuestionRow>
+          <span>Czy korzysta ze sprzętu pomocniczego?</span>
+          <ToggleCheckbox checked={kw.sprzet.enabled} onChange={() => kwUpdate('sprzet', 'enabled', !kw.sprzet.enabled)} label={kw.sprzet.enabled ? 'Tak' : 'Nie'} />
+        </QuestionRow>
+        {kw.sprzet.enabled && (
+          <>
+            <DataTable>
+              <thead><tr><th>Sprzęt</th><th></th></tr></thead>
+              <tbody>
+                {kw.sprzet.wpisy.map((row, i) => (
+                  <tr key={i}>
+                    <td><ACInput name={`__kw_sprzet_${i}`} value={row.nazwa} onChange={(e) => kwUpdateRow('sprzet', 'wpisy', i, 'nazwa', e.target.value)} options={SPRZET_POMOCNICZY} placeholder="Wpisz sprzęt..." /></td>
+                    <td><RemoveBtn onClick={() => kwRemoveRow('sprzet', 'wpisy', i)}>×</RemoveBtn></td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+            <AddRowBtn onClick={() => kwAddRow('sprzet', 'wpisy', { nazwa: '' })}>+ Dodaj</AddRowBtn>
           </>
         )}
 
