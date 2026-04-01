@@ -41,7 +41,12 @@ function generateSlots(int) {
    Styled
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const Wrap = styled.div` padding: 24px; `;
+const Wrap = styled.div`
+  padding: 24px;
+  display: flex; flex-direction: column;
+  height: 100%; max-height: calc(100vh - 56px);
+  overflow: hidden;
+`;
 
 const PageHeader = styled.div`
   display: flex; align-items: center; justify-content: space-between;
@@ -75,7 +80,16 @@ const EmptyState = styled.div`
 
 const TableWrap = styled.div`
   border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  overflow: hidden; background: var(--bg-card);
+  background: var(--bg-card); flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+
+  /* thin scrollbar */
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #c4c4c4; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+  scrollbar-width: thin;
+  scrollbar-color: #c4c4c4 #f1f1f1;
 `;
 
 const MainTable = styled.table`
@@ -86,14 +100,20 @@ const MainTable = styled.table`
     font-weight: 700; font-size: 0.85rem; color: #555;
     text-transform: uppercase; letter-spacing: 0.5px;
     border-bottom: 2px solid #e0e0e0;
+    position: sticky; top: 0; z-index: 2;
   }
 
   > tbody > tr > td {
     padding: 0; border-bottom: 2px solid #e9ecef;
     text-align: center;
   }
-  > tbody > tr > td:nth-child(-n+2) {
+  > tbody > tr > td:nth-child(1) {
     vertical-align: middle;
+    border-right: 1px solid #e9ecef;
+  }
+  > tbody > tr > td:nth-child(2) {
+    vertical-align: middle;
+    border-right: 1px solid #e9ecef;
   }
   > tbody > tr > td:nth-child(3) {
     vertical-align: top; overflow: hidden;
@@ -182,7 +202,7 @@ const AddIntBtn = styled.button`
   display: block; margin: 8px auto; padding: 6px 24px;
   border: 1.5px dashed #93c5fd; border-radius: 6px;
   background: #f8faff; color: #2563eb; font-size: 0.78rem; font-weight: 600;
-  cursor: pointer; transition: background 0.15s;
+  cursor: pointer; transition: background 0.15s; text-align: center;
   &:hover { background: #eff6ff; }
 `;
 
@@ -549,7 +569,15 @@ export default function PlanOpieki({ patient }) {
                                 </IntName>
 
                                 {slots.length > 0 ? (
-                                  <SlotsWrap onClick={(e) => e.stopPropagation()}>
+                                  <SlotsWrap
+                                    onClick={(e) => e.stopPropagation()}
+                                    onWheel={(e) => {
+                                      if (e.deltaY !== 0) {
+                                        e.currentTarget.scrollLeft += e.deltaY;
+                                        e.preventDefault();
+                                      }
+                                    }}
+                                  >
                                     {slots.map((slot, si) => (
                                       <SlotCol key={si}>
                                         <SlotDate>{slot.date}</SlotDate>
