@@ -699,11 +699,47 @@ export default function PlanOpieki({ patient }) {
     setAiSuggestions((prev) => prev.filter((s) => s._id !== sug._id));
   };
 
-  const rateAiElement = (entryId, key, value) => {
+  const acceptAiElement = (entryId, key) => {
     setAiRatings((prev) => ({
       ...prev,
-      [entryId]: { ...(prev[entryId] || {}), [key]: value },
+      [entryId]: { ...(prev[entryId] || {}), [key]: 'accepted' },
     }));
+  };
+
+  const rejectAiElement = async (entryId, key) => {
+    try {
+      const entry = entries.find((e) => e.id === entryId);
+      if (!entry) return;
+
+      if (key === 'problem') {
+        // Removing the problem = delete the whole entry
+        await api.delete(`/plan-opieki/${entryId}`);
+        notify('Wpis AI usunięty', 'success');
+        fetchEntries();
+        return;
+      }
+
+      if (key === 'diagnoza') {
+        await api.put(`/plan-opieki/${entryId}`, { diagnoza: '' });
+        notify('Diagnoza AI usunięta', 'success');
+        fetchEntries();
+        return;
+      }
+
+      // interwencja key is like "int_0", "int_1", etc.
+      const match = key.match(/^int_(\d+)$/);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        const current = Array.isArray(entry.interwencje) ? [...entry.interwencje] : [];
+        current.splice(idx, 1);
+        await api.put(`/plan-opieki/${entryId}`, { interwencje: current });
+        notify('Interwencja AI usunięta', 'success');
+        fetchEntries();
+      }
+    } catch (err) {
+      console.error(err);
+      notify('Błąd usuwania elementu AI', 'error');
+    }
   };
 
   if (!patient) return null;
@@ -799,10 +835,12 @@ export default function PlanOpieki({ patient }) {
                         </CellText>
                         {entry.ai && (
                           <CellRating onClick={(e) => e.stopPropagation()}>
-                            <RateBtn $type="yes" disabled={aiRatings[entry.id]?.problem === 'yes'}
-                              onClick={() => rateAiElement(entry.id, 'problem', 'yes')}>✓</RateBtn>
-                            <RateBtn $type="no" disabled={aiRatings[entry.id]?.problem === 'no'}
-                              onClick={() => rateAiElement(entry.id, 'problem', 'no')}>✗</RateBtn>
+                            {aiRatings[entry.id]?.problem !== 'accepted' ? (
+                              <>
+                                <RateBtn $type="yes" onClick={() => acceptAiElement(entry.id, 'problem')}>✓</RateBtn>
+                                <RateBtn $type="no" onClick={() => rejectAiElement(entry.id, 'problem')}>✗</RateBtn>
+                              </>
+                            ) : null}
                           </CellRating>
                         )}
                       </CellContent>
@@ -820,10 +858,12 @@ export default function PlanOpieki({ patient }) {
                         </CellText>
                         {entry.ai && (
                           <CellRating onClick={(e) => e.stopPropagation()}>
-                            <RateBtn $type="yes" disabled={aiRatings[entry.id]?.diagnoza === 'yes'}
-                              onClick={() => rateAiElement(entry.id, 'diagnoza', 'yes')}>✓</RateBtn>
-                            <RateBtn $type="no" disabled={aiRatings[entry.id]?.diagnoza === 'no'}
-                              onClick={() => rateAiElement(entry.id, 'diagnoza', 'no')}>✗</RateBtn>
+                            {aiRatings[entry.id]?.diagnoza !== 'accepted' ? (
+                              <>
+                                <RateBtn $type="yes" onClick={() => acceptAiElement(entry.id, 'diagnoza')}>✓</RateBtn>
+                                <RateBtn $type="no" onClick={() => rejectAiElement(entry.id, 'diagnoza')}>✗</RateBtn>
+                              </>
+                            ) : null}
                           </CellRating>
                         )}
                       </CellContent>
@@ -848,10 +888,12 @@ export default function PlanOpieki({ patient }) {
                                     {entry.ai && <AiBadge style={{ fontSize: '0.58rem', marginTop: 2 }}>🤖 AI</AiBadge>}
                                     {entry.ai && (
                                       <CellRating style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
-                                        <RateBtn $type="yes" disabled={aiRatings[entry.id]?.[`int_${i}`] === 'yes'}
-                                          onClick={() => rateAiElement(entry.id, `int_${i}`, 'yes')}>✓</RateBtn>
-                                        <RateBtn $type="no" disabled={aiRatings[entry.id]?.[`int_${i}`] === 'no'}
-                                          onClick={() => rateAiElement(entry.id, `int_${i}`, 'no')}>✗</RateBtn>
+                                        {aiRatings[entry.id]?.[`int_${i}`] !== 'accepted' ? (
+                                          <>
+                                            <RateBtn $type="yes" onClick={() => acceptAiElement(entry.id, `int_${i}`)}>✓</RateBtn>
+                                            <RateBtn $type="no" onClick={() => rejectAiElement(entry.id, `int_${i}`)}>✗</RateBtn>
+                                          </>
+                                        ) : null}
                                       </CellRating>
                                     )}
                                   </div>
