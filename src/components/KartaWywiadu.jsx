@@ -619,7 +619,7 @@ const Wrapper = styled.div`
 
 const Title = styled.h2`
   font-size: 1.5rem;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
 `;
 
@@ -672,7 +672,7 @@ const Field = styled.div`
   label {
     font-size: 0.8rem;
     font-weight: 500;
-    color: #555;
+    color: var(--text-secondary);
   }
 
   input, select, textarea {
@@ -690,7 +690,7 @@ const Field = styled.div`
 const SmallTitle = styled.h4`
   font-size: 0.8rem;
   font-weight: 500;
-  color: #555;
+  color: var(--text-secondary);
   margin: 10px 0 4px;
 `;
 
@@ -719,7 +719,7 @@ const RemoveBtn = styled.button`
 
 const AddRowBtn = styled.button`
   background: none; border: 1px dashed #2387B6; color: #2387B6; border-radius: 6px; padding: 3px 12px; font-size: 0.8rem; cursor: pointer; margin-top: 4px;
-  &:hover { background: #f0f7fb; }
+  &:hover { background: var(--bg-hover); }
 `;
 
 const SaveBar = styled.div`
@@ -753,8 +753,8 @@ const ACDrop = styled.div`
   position: absolute;
   top: 100%;
   left: 0; right: 0;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 0 0 8px 8px;
   max-height: 180px;
   overflow-y: auto;
@@ -766,5 +766,5 @@ const ACOpt = styled.div`
   padding: 8px 12px;
   font-size: 0.88rem;
   cursor: pointer;
-  &:hover { background: #e8f4f8; color: #2387B6; }
+  &:hover { background: var(--bg-hover); color: #2387B6; }
 `;

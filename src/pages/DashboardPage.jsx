@@ -213,7 +213,7 @@ const Header = styled.div`
 
   h1 {
     font-size: 1.8rem;
-    color: #1a1a2e;
+    color: var(--text-primary);
   }
 `;
 
@@ -236,7 +236,7 @@ const Tabs = styled.div`
   display: flex;
   gap: 0;
   margin-bottom: 1.5rem;
-  background: #e5e7eb;
+  background: var(--bg-tabs);
   border-radius: 10px;
   overflow: hidden;
 `;
@@ -246,13 +246,13 @@ const Tab = styled.button`
   padding: 12px 20px;
   border: none;
   background: ${(p) => (p.$active ? '#2387B6' : 'transparent')};
-  color: ${(p) => (p.$active ? 'white' : '#555')};
+  color: ${(p) => (p.$active ? 'white' : 'var(--text-secondary)')};
   font-size: 0.9rem;
   font-weight: ${(p) => (p.$active ? '600' : '400')};
   transition: all 0.2s;
 
   &:hover {
-    background: ${(p) => (p.$active ? '#2387B6' : '#d1d5db')};
+    background: ${(p) => (p.$active ? '#2387B6' : 'var(--bg-hover)')};
   }
 `;
 
@@ -266,10 +266,10 @@ const SectionPlaceholder = styled.div`
   text-align: center;
   padding: 4rem 2rem;
   font-size: 1.2rem;
-  color: #999;
-  background: white;
+  color: var(--text-muted);
+  background: var(--bg-card);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px var(--shadow-color);
 `;
 
 const TransferOverlay = styled.div`
@@ -283,15 +283,15 @@ const TransferOverlay = styled.div`
 `;
 
 const TransferModal = styled.div`
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 2rem;
   width: 440px;
   max-width: 95vw;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 
-  h3 { margin-bottom: 0.5rem; color: #1a1a2e; }
-  p { color: #666; margin-bottom: 1rem; font-size: 0.9rem; }
+  h3 { margin-bottom: 0.5rem; color: var(--text-primary); }
+  p { color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem; }
 `;
 
 const TransferSelect = styled.select`

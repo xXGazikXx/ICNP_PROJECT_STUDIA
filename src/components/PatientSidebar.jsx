@@ -42,8 +42,8 @@ export default function PatientSidebar({ patient, activeSection, onSectionChange
 const Sidebar = styled.div`
   width: 240px;
   min-width: 240px;
-  background: white;
-  border-right: 1px solid #e0e0e0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   height: calc(100vh - 56px);
@@ -83,7 +83,7 @@ const CardInfo = styled.div`
 const CardName = styled.div`
   font-weight: 600;
   font-size: 0.9rem;
-  color: #1a1a2e;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -91,7 +91,7 @@ const CardName = styled.div`
 
 const CardPesel = styled.div`
   font-size: 0.75rem;
-  color: #777;
+  color: var(--text-muted);
 `;
 
 const ChangeBtn = styled.button`
@@ -124,8 +124,8 @@ const NavItem = styled.button`
   gap: 10px;
   padding: 12px 16px;
   border: none;
-  background: ${(p) => (p.$active ? '#e8f4f8' : 'transparent')};
-  color: ${(p) => (p.$active ? '#2387B6' : '#555')};
+  background: ${(p) => (p.$active ? 'var(--bg-hover)' : 'transparent')};
+  color: ${(p) => (p.$active ? '#2387B6' : 'var(--text-secondary)')};
   font-weight: ${(p) => (p.$active ? '600' : '400')};
   font-size: 0.85rem;
   text-align: left;
@@ -134,7 +134,7 @@ const NavItem = styled.button`
   transition: all 0.15s;
 
   &:hover {
-    background: #f0f7fb;
+    background: var(--bg-hover);
     color: #2387B6;
   }
 

@@ -170,36 +170,37 @@ const SearchInput = styled.input`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px var(--shadow-color);
 
   th {
-    background: #f8f9fa;
+    background: var(--bg-tabs);
     padding: 12px 16px;
     text-align: center;
     font-weight: 600;
     font-size: 0.85rem;
-    color: #555;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 2px solid var(--border-light);
   }
 
   td {
     padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-light);
     font-size: 0.95rem;
     text-align: center;
+    color: var(--text-primary);
   }
 
   tbody tr:hover {
-    background: #f0f7fb;
+    background: var(--bg-hover);
   }
 
   tbody tr.selected {
-    background: #e0f0f8;
+    background: var(--bg-hover);
   }
 `;
 

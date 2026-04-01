@@ -894,7 +894,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 2rem;
   width: 900px;
@@ -908,7 +908,7 @@ const Modal = styled.div`
 
   h2 {
     margin-bottom: 1.5rem;
-    color: #1a1a2e;
+    color: var(--text-primary);
     font-size: 1.3rem;
   }
 `;
@@ -1010,9 +1010,9 @@ const Buttons = styled.div`
 
 const BtnCancel = styled.button`
   padding: 10px 20px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
-  background: white;
+  background: var(--bg-card);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -1056,8 +1056,8 @@ const ACDropdown = styled.div`
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 0 0 8px 8px;
   max-height: 180px;
   overflow-y: auto;

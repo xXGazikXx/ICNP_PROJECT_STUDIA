@@ -49,7 +49,7 @@ const PageHeader = styled.div`
 `;
 
 const PageTitle = styled.h2`
-  font-size: 1.35rem; font-weight: 700; color: #1a1a2e; margin: 0;
+  font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin: 0;
 `;
 const PatientName = styled.span`
   font-size: 0.9rem; color: #666; font-weight: 500;
@@ -75,7 +75,7 @@ const EmptyState = styled.div`
 
 const TableWrap = styled.div`
   border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  overflow: hidden; background: #fff;
+  overflow: hidden; background: var(--bg-card);
 `;
 
 const MainTable = styled.table`
@@ -103,11 +103,11 @@ const MainTable = styled.table`
 const CellContent = styled.div`
   padding: 16px 18px; cursor: pointer; position: relative;
   transition: background 0.15s;
-  &:hover { background: #f0f7fb; }
+  &:hover { background: var(--bg-hover); }
 `;
 
 const CellText = styled.div`
-  font-size: 0.92rem; color: #111827; line-height: 1.6;
+  font-size: 0.92rem; color: var(--text-primary); line-height: 1.6;
 `;
 
 const IcnpCode = styled.span`
@@ -117,13 +117,13 @@ const IcnpCode = styled.span`
 /* ─── Interwencje inside cell ──────────────────────────────────────────── */
 
 const IntSection = styled.div`
-  border-left: 2px solid #e5e7eb;
+  border-left: 2px solid var(--border-color);
 `;
 
 const IntBlock = styled.div`
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer; transition: background 0.15s;
-  &:hover { background: #f8fafc; }
+  &:hover { background: var(--bg-hover); }
   &:last-of-type { border-bottom: none; }
 `;
 
@@ -134,7 +134,7 @@ const IntRow = styled.div`
 const IntName = styled.div`
   min-width: 180px; max-width: 220px; width: 200px; padding: 10px 14px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.84rem; color: #111827; text-align: center;
+  font-size: 0.84rem; color: var(--text-primary); text-align: center;
   border-right: 1px solid #f0f0f0; flex-shrink: 0;
 `;
 
@@ -165,7 +165,7 @@ const SlotDate = styled.div`
 `;
 
 const SlotTime = styled.div`
-  font-size: 0.72rem; color: #374151; font-weight: 600; white-space: nowrap;
+  font-size: 0.72rem; color: var(--text-label); font-weight: 600; white-space: nowrap;
 `;
 
 const SlotCheck = styled.input.attrs({ type: 'checkbox' })`
@@ -189,11 +189,11 @@ const AddIntBtn = styled.button`
 /* ─── Modal ────────────────────────────────────────────────────────────── */
 
 const Overlay = styled.div`
-  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000;
+  position: fixed; inset: 0; background: var(--overlay-bg); z-index: 1000;
   display: flex; align-items: center; justify-content: center; padding: 20px;
 `;
 const Modal = styled.div`
-  background: #fff; border-radius: 16px; width: 100%;
+  background: var(--bg-card); border-radius: 16px; width: 100%;
   max-width: ${({ $wide }) => ($wide ? '700px' : '550px')};
   max-height: 92vh; overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
@@ -203,7 +203,7 @@ const ModalHeader = styled.div`
   padding: 20px 24px 16px; border-bottom: 1px solid #e5e7eb;
 `;
 const ModalTitle = styled.h3`
-  font-size: 1.1rem; font-weight: 700; color: #1a1a2e; margin: 0;
+  font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0;
 `;
 const CloseBtn = styled.button`
   background: none; border: none; font-size: 1.4rem; color: #6b7280;
@@ -218,13 +218,13 @@ const ModalFooter = styled.div`
   padding: 16px 24px; border-top: 1px solid #e5e7eb;
 `;
 const CancelBtn = styled.button`
-  background: none; border: 1.5px solid #d1d5db; color: #374151;
+  background: none; border: 1.5px solid var(--border-color); color: var(--text-label);
   border-radius: 8px; padding: 10px 24px; font-size: 0.9rem; font-weight: 600;
   cursor: pointer; &:hover { background: #f3f4f6; }
 `;
 const FormGroup = styled.div` display: flex; flex-direction: column; gap: 6px; `;
 const FormLabel = styled.label`
-  font-size: 0.82rem; font-weight: 700; color: #374151;
+  font-size: 0.82rem; font-weight: 700; color: var(--text-label);
   text-transform: uppercase; letter-spacing: 0.04em;
 `;
 const Required = styled.span` color: #ef4444; `;
@@ -250,13 +250,13 @@ const AcInput = styled.input`
 `;
 const AcDropdown = styled.ul`
   position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  background: #fff; border: 1.5px solid #d1d5db; border-radius: 8px;
+  background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 8px;
   max-height: 200px; overflow-y: auto; z-index: 100;
   margin: 0; padding: 4px 0; list-style: none;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
 `;
 const AcItem = styled.li`
-  padding: 8px 14px; font-size: 0.88rem; cursor: pointer; color: #111827;
+  padding: 8px 14px; font-size: 0.88rem; cursor: pointer; color: var(--text-primary);
   &:hover, &[data-active='true'] { background: #eff6ff; color: #1d4ed8; }
 `;
 const AcHint = styled.div`

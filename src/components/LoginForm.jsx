@@ -65,7 +65,7 @@ const StyledWrapper = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #f0f2f5;
+  background: var(--bg-body);
 
   .container {
     display: flex;
@@ -74,7 +74,7 @@ const StyledWrapper = styled.div`
   }
 
   .login {
-    color: #000;
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 2px;
     display: block;
@@ -100,8 +100,8 @@ const StyledWrapper = styled.div`
     width: 340px;
     flex-direction: column;
     gap: 30px;
-    background: #e3e3e3;
-    box-shadow: 16px 16px 32px #c8c8c8, -16px -16px 32px #fefefe;
+    background: var(--bg-card);
+    box-shadow: 16px 16px 32px var(--shadow-color), -16px -16px 32px var(--shadow-color);
     border-radius: 12px;
     padding: 2rem;
   }
@@ -116,11 +116,11 @@ const StyledWrapper = styled.div`
     padding: 10px;
     outline: none;
     border: none;
-    color: #000;
+    color: var(--text-primary);
     font-size: 1em;
     background: transparent;
-    border-left: 2px solid #000;
-    border-bottom: 2px solid #000;
+    border-left: 2px solid var(--text-primary);
+    border-bottom: 2px solid var(--text-primary);
     transition: 0.1s;
     border-bottom-left-radius: 8px;
   }
@@ -134,7 +134,7 @@ const StyledWrapper = styled.div`
     padding: 10px;
     pointer-events: none;
     font-size: 12px;
-    color: #000;
+    color: var(--text-primary);
     text-transform: uppercase;
     transition: 0.5s;
     letter-spacing: 3px;
@@ -146,15 +146,15 @@ const StyledWrapper = styled.div`
     transform: translateX(113px) translateY(-15px);
     font-size: 0.8em;
     padding: 5px 10px;
-    background: #000;
+    background: var(--text-primary);
     letter-spacing: 0.2em;
-    color: #fff;
+    color: var(--bg-card);
     border: 2px;
   }
 
   .inputBox input:valid,
   .inputBox input:focus {
-    border: 2px solid #000;
+    border: 2px solid var(--text-primary);
     border-radius: 8px;
   }
 
@@ -162,7 +162,7 @@ const StyledWrapper = styled.div`
     height: 45px;
     width: 120px;
     border-radius: 5px;
-    border: 2px solid #000;
+    border: 2px solid var(--text-primary);
     cursor: pointer;
     background-color: transparent;
     transition: 0.5s;
@@ -173,8 +173,8 @@ const StyledWrapper = styled.div`
   }
 
   .enter:hover {
-    background-color: rgb(0, 0, 0);
-    color: white;
+    background-color: var(--text-primary);
+    color: var(--bg-card);
   }
 
   .enter:disabled {

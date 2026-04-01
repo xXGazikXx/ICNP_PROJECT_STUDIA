@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
+import DarkModeToggle from './components/DarkModeToggle';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
@@ -12,6 +13,7 @@ export default function App() {
   return (
     <>
       {user && <Navbar />}
+      <DarkModeToggle />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
