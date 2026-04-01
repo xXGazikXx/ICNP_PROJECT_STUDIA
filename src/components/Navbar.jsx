@@ -29,6 +29,11 @@ export default function Navbar() {
             Użytkownicy
           </NavLink>
         )}
+        {user?.role === 'prowadzacy' && (
+          <NavLink to="/groups" $active={isActive('/groups') || location.pathname.startsWith('/groups/')}>
+            Studenci
+          </NavLink>
+        )}
       </NavLeft>
       <NavRight>
         <UserInfo>
