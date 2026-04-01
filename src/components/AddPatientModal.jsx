@@ -25,6 +25,7 @@ const KATEGORIE_PACJENTA = ['Kat I', 'Kat II', 'Kat III'];
 const TRYBY_PRZYJECIA = ['nagły', 'planowany'];
 const RODZAJE_ODDECHU = ['prawidłowy', 'przyspieszony', 'zwolniony', 'Cheyne-Stokesa', 'Kussmaula', 'Biota', 'inny'];
 const TYPY_KONTAKTU = ['słowny', 'pozasłowny', 'pisemny'];
+const GRUPY_KRWI = ['A Rh+', 'A Rh-', 'B Rh+', 'B Rh-', 'AB Rh+', 'AB Rh-', '0 Rh+', '0 Rh-'];
 
 function AutocompleteInput({ value, onChange, options, placeholder, name }) {
   const [open, setOpen] = useState(false);
@@ -136,11 +137,11 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
     const kw = editData?.karta_wywiadu || {};
     return {
       kontakt: { typ: kw.kontakt?.typ || '', logiczny: kw.kontakt?.logiczny || false, zachowany: kw.kontakt?.zachowany || false, brak_kontaktu: kw.kontakt?.brak_kontaktu || false },
-      choroby: { objawy_obecnej: kw.choroby?.objawy_obecnej || '', przebyte: kw.choroby?.przebyte || [{ choroba: '', od_kiedy: '', leczenie: '' }], zakazne: kw.choroby?.zakazne || [{ choroba: '', od_kiedy: '' }], zabiegi: kw.choroby?.zabiegi || [{ zabieg: '', data: '' }] },
+      choroby: { rozpoznanie_glowne: kw.choroby?.rozpoznanie_glowne || '', przewlekle: kw.choroby?.przewlekle || [{ choroba: '', od_kiedy: '', leczenie: '' }], przebyte_enabled: kw.choroby?.przebyte_enabled || false, przebyte: kw.choroby?.przebyte || [], zabiegi_enabled: kw.choroby?.zabiegi_enabled || false, zabiegi: kw.choroby?.zabiegi || [] },
       parametry: { wzrost: kw.parametry?.wzrost || '', masa: kw.parametry?.masa || '', bmi: kw.parametry?.bmi || '', obwod_glowy: kw.parametry?.obwod_glowy || '', obwod_klatki: kw.parametry?.obwod_klatki || '' },
       oznaki_zycia: { temperatura: kw.oznaki_zycia?.temperatura || '', ctk_skurczowe: kw.oznaki_zycia?.ctk_skurczowe || '', ctk_rozkurczowe: kw.oznaki_zycia?.ctk_rozkurczowe || '', tetno: kw.oznaki_zycia?.tetno || '', oddech: kw.oznaki_zycia?.oddech || '', rodzaj_oddechu: kw.oznaki_zycia?.rodzaj_oddechu || 'prawidłowy' },
-      ocena_bolu: { wpisy: kw.ocena_bolu?.wpisy || [{ kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' }] },
-      krew: { hbs: kw.krew?.hbs || 'nie badano', hiv: kw.krew?.hiv || 'nie badano', transfuzje: kw.krew?.transfuzje || false, reakcje: kw.krew?.reakcje || '' },
+      ocena_bolu: { wystepuje: kw.ocena_bolu?.wystepuje || false, wpisy: kw.ocena_bolu?.wpisy || [] },
+      krew: { grupa_krwi: kw.krew?.grupa_krwi || '', oznaczana: kw.krew?.oznaczana || false, oznaczana_data: kw.krew?.oznaczana_data || '', hiv: kw.krew?.hiv || 'nie wiem', transfuzje: kw.krew?.transfuzje || false, transfuzje_data: kw.krew?.transfuzje_data || '', transfuzje_reakcja: kw.krew?.transfuzje_reakcja || false },
       alergie: { wystepuja: kw.alergie?.wystepuja || false, wpisy: kw.alergie?.wpisy || [{ alergia: '', opis: '' }] },
       styl_zycia: { palenie: kw.styl_zycia?.palenie || false, palenie_ile: kw.styl_zycia?.palenie_ile || '', alkohol: kw.styl_zycia?.alkohol || false, alkohol_ile: kw.styl_zycia?.alkohol_ile || '', narkotyki: kw.styl_zycia?.narkotyki || false, narkotyki_wpisy: kw.styl_zycia?.narkotyki_wpisy || [{ nazwa: '', czestotliwosc: '' }], aktywnosc: kw.styl_zycia?.aktywnosc || '', dieta: kw.styl_zycia?.dieta || '' },
     };
@@ -573,52 +574,66 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
 
           <SectionTitle>Choroby i zabiegi</SectionTitle>
           <Field>
-            <label>Objawy choroby obecnej</label>
-            <textarea rows={3} value={kw.choroby.objawy_obecnej} onChange={(e) => kwUpdate('choroby', 'objawy_obecnej', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
+            <label>Rozpoznanie główne</label>
+            <textarea rows={3} value={kw.choroby.rozpoznanie_glowne} onChange={(e) => kwUpdate('choroby', 'rozpoznanie_glowne', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
-          <KWSmallTitle>Choroby przebyte</KWSmallTitle>
+          <KWSmallTitle>Choroby przewlekłe</KWSmallTitle>
           <KWTable>
             <thead><tr><th>Choroba</th><th>Od kiedy</th><th>Leczenie</th><th></th></tr></thead>
             <tbody>
-              {kw.choroby.przebyte.map((row, i) => (
+              {kw.choroby.przewlekle.map((row, i) => (
                 <tr key={i}>
-                  <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'choroba', e.target.value)} /></td>
-                  <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
-                  <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'leczenie', e.target.value)} /></td>
-                  <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'przebyte', i)}>×</KWRemoveBtn></td>
+                  <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'choroba', e.target.value)} /></td>
+                  <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
+                  <td><input value={row.leczenie} onChange={(e) => kwUpdateRow('choroby', 'przewlekle', i, 'leczenie', e.target.value)} /></td>
+                  <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'przewlekle', i)}>×</KWRemoveBtn></td>
                 </tr>
               ))}
             </tbody>
           </KWTable>
-          <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'przebyte', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</KWAddBtn>
-          <KWSmallTitle>Choroby zakaźne</KWSmallTitle>
-          <KWTable>
-            <thead><tr><th>Choroba</th><th>Od kiedy</th><th></th></tr></thead>
-            <tbody>
-              {kw.choroby.zakazne.map((row, i) => (
-                <tr key={i}>
-                  <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'zakazne', i, 'choroba', e.target.value)} /></td>
-                  <td><input value={row.od_kiedy} onChange={(e) => kwUpdateRow('choroby', 'zakazne', i, 'od_kiedy', e.target.value)} placeholder="rok" /></td>
-                  <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'zakazne', i)}>×</KWRemoveBtn></td>
-                </tr>
-              ))}
-            </tbody>
-          </KWTable>
-          <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'zakazne', { choroba: '', od_kiedy: '' })}>+ Dodaj</KWAddBtn>
-          <KWSmallTitle>Przebyte zabiegi operacyjne</KWSmallTitle>
-          <KWTable>
-            <thead><tr><th>Zabieg</th><th>Data</th><th></th></tr></thead>
-            <tbody>
-              {kw.choroby.zabiegi.map((row, i) => (
-                <tr key={i}>
-                  <td><input value={row.zabieg} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'zabieg', e.target.value)} /></td>
-                  <td><input type="date" value={row.data} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'data', e.target.value)} /></td>
-                  <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'zabiegi', i)}>×</KWRemoveBtn></td>
-                </tr>
-              ))}
-            </tbody>
-          </KWTable>
-          <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</KWAddBtn>
+          <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'przewlekle', { choroba: '', od_kiedy: '', leczenie: '' })}>+ Dodaj</KWAddBtn>
+          <KWQuestionRow>
+            <span>Przebyte choroby</span>
+            <ToggleCheckbox checked={kw.choroby.przebyte_enabled} onChange={() => kwUpdate('choroby', 'przebyte_enabled', !kw.choroby.przebyte_enabled)} label={kw.choroby.przebyte_enabled ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.choroby.przebyte_enabled && (
+            <>
+              <KWTable>
+                <thead><tr><th>Choroba</th><th>Kiedy</th><th></th></tr></thead>
+                <tbody>
+                  {kw.choroby.przebyte.map((row, i) => (
+                    <tr key={i}>
+                      <td><input value={row.choroba} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'choroba', e.target.value)} /></td>
+                      <td><input value={row.kiedy} onChange={(e) => kwUpdateRow('choroby', 'przebyte', i, 'kiedy', e.target.value)} placeholder="rok" /></td>
+                      <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'przebyte', i)}>×</KWRemoveBtn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </KWTable>
+              <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'przebyte', { choroba: '', kiedy: '' })}>+ Dodaj</KWAddBtn>
+            </>
+          )}
+          <KWQuestionRow>
+            <span>Przebyte zabiegi operacyjne</span>
+            <ToggleCheckbox checked={kw.choroby.zabiegi_enabled} onChange={() => kwUpdate('choroby', 'zabiegi_enabled', !kw.choroby.zabiegi_enabled)} label={kw.choroby.zabiegi_enabled ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.choroby.zabiegi_enabled && (
+            <>
+              <KWTable>
+                <thead><tr><th>Zabieg</th><th>Data</th><th></th></tr></thead>
+                <tbody>
+                  {kw.choroby.zabiegi.map((row, i) => (
+                    <tr key={i}>
+                      <td><input value={row.zabieg} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'zabieg', e.target.value)} /></td>
+                      <td><input type="date" value={row.data} onChange={(e) => kwUpdateRow('choroby', 'zabiegi', i, 'data', e.target.value)} /></td>
+                      <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('choroby', 'zabiegi', i)}>×</KWRemoveBtn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </KWTable>
+              <KWAddBtn type="button" onClick={() => kwAddRow('choroby', 'zabiegi', { zabieg: '', data: '' })}>+ Dodaj</KWAddBtn>
+            </>
+          )}
 
           <SectionTitle>Parametry</SectionTitle>
           <Row3>
@@ -647,53 +662,74 @@ export default function AddPatientModal({ onClose, onAdded, editData, jednostka 
           </Row3>
 
           <SectionTitle>Ocena bólu</SectionTitle>
-          <KWTable>
-            <thead><tr><th>Kategoria</th><th>Lokalizacja</th><th>Częstotliwość</th><th>Intensywność</th><th></th></tr></thead>
-            <tbody>
-              {kw.ocena_bolu.wpisy.map((row, i) => (
-                <tr key={i}>
-                  <td>
-                    <select value={row.kategoria} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'kategoria', e.target.value)}>
-                      <option value="">— wybierz —</option><option>ostry</option><option>przewlekły</option><option>nawracający</option>
-                    </select>
-                  </td>
-                  <td><input value={row.lokalizacja} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'lokalizacja', e.target.value)} /></td>
-                  <td>
-                    <select value={row.czestotliwosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'czestotliwosc', e.target.value)}>
-                      <option value="">— wybierz —</option><option>ciągły</option><option>okresowy</option><option>sporadyczny</option>
-                    </select>
-                  </td>
-                  <td><input type="number" min="0" max="10" value={row.intensywnosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'intensywnosc', e.target.value)} /></td>
-                  <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('ocena_bolu', 'wpisy', i)}>×</KWRemoveBtn></td>
-                </tr>
-              ))}
-            </tbody>
-          </KWTable>
-          <KWAddBtn type="button" onClick={() => kwAddRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</KWAddBtn>
+          <KWQuestionRow>
+            <span>Czy występuje ból?</span>
+            <ToggleCheckbox checked={kw.ocena_bolu.wystepuje} onChange={() => kwUpdate('ocena_bolu', 'wystepuje', !kw.ocena_bolu.wystepuje)} label={kw.ocena_bolu.wystepuje ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.ocena_bolu.wystepuje && (
+            <>
+              <KWTable>
+                <thead><tr><th>Kategoria</th><th>Lokalizacja</th><th>Częstotliwość</th><th>Intensywność</th><th></th></tr></thead>
+                <tbody>
+                  {kw.ocena_bolu.wpisy.map((row, i) => (
+                    <tr key={i}>
+                      <td>
+                        <select value={row.kategoria} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'kategoria', e.target.value)}>
+                          <option value="">— wybierz —</option><option>ostry</option><option>przewlekły</option><option>nawracający</option>
+                        </select>
+                      </td>
+                      <td><input value={row.lokalizacja} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'lokalizacja', e.target.value)} /></td>
+                      <td>
+                        <select value={row.czestotliwosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'czestotliwosc', e.target.value)}>
+                          <option value="">— wybierz —</option><option>ciągły</option><option>okresowy</option><option>sporadyczny</option>
+                        </select>
+                      </td>
+                      <td><input type="number" min="0" max="10" value={row.intensywnosc} onChange={(e) => kwUpdateRow('ocena_bolu', 'wpisy', i, 'intensywnosc', e.target.value)} /></td>
+                      <td><KWRemoveBtn type="button" onClick={() => kwRemoveRow('ocena_bolu', 'wpisy', i)}>×</KWRemoveBtn></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </KWTable>
+              <KWAddBtn type="button" onClick={() => kwAddRow('ocena_bolu', 'wpisy', { kategoria: '', lokalizacja: '', czestotliwosc: '', intensywnosc: '' })}>+ Dodaj</KWAddBtn>
+            </>
+          )}
 
           <SectionTitle>Krew</SectionTitle>
           <Row3>
             <Field>
-              <label>HBs Ag</label>
-              <select value={kw.krew.hbs} onChange={(e) => kwUpdate('krew', 'hbs', e.target.value)}>
-                <option>nie badano</option><option>dodatni</option><option>ujemny</option>
-              </select>
-            </Field>
-            <Field>
-              <label>HIV</label>
-              <select value={kw.krew.hiv} onChange={(e) => kwUpdate('krew', 'hiv', e.target.value)}>
-                <option>nie badano</option><option>dodatni</option><option>ujemny</option>
-              </select>
-            </Field>
-            <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
-              <ToggleCheckbox checked={kw.krew.transfuzje} onChange={() => kwUpdate('krew', 'transfuzje', !kw.krew.transfuzje)} label="Transfuzje krwi" />
+              <label>Grupa krwi</label>
+              <AutocompleteInput name="__kw_grupa_krwi" value={kw.krew.grupa_krwi} onChange={(e) => kwUpdate('krew', 'grupa_krwi', e.target.value)} options={GRUPY_KRWI} placeholder="Wpisz grupę krwi..." />
             </Field>
           </Row3>
+          <KWQuestionRow>
+            <span>Czy była kiedyś oznaczana grupa krwi?</span>
+            <ToggleCheckbox checked={kw.krew.oznaczana} onChange={() => kwUpdate('krew', 'oznaczana', !kw.krew.oznaczana)} label={kw.krew.oznaczana ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
+          {kw.krew.oznaczana && (
+            <Field style={{ marginBottom: 12 }}><label>Data oznaczenia</label><input type="date" value={kw.krew.oznaczana_data} onChange={(e) => kwUpdate('krew', 'oznaczana_data', e.target.value)} /></Field>
+          )}
+          <KWQuestionRow>
+            <span>HIV</span>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {['tak', 'nie', 'nie wiem'].map((opt) => (
+                <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.9rem', cursor: 'pointer' }}>
+                  <input type="radio" name="__kw_hiv" value={opt} checked={kw.krew.hiv === opt} onChange={() => kwUpdate('krew', 'hiv', opt)} style={{ width: 'auto', margin: 0 }} />
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </label>
+              ))}
+            </div>
+          </KWQuestionRow>
+          <KWQuestionRow>
+            <span>Transfuzje krwi</span>
+            <ToggleCheckbox checked={kw.krew.transfuzje} onChange={() => kwUpdate('krew', 'transfuzje', !kw.krew.transfuzje)} label={kw.krew.transfuzje ? 'Tak' : 'Nie'} />
+          </KWQuestionRow>
           {kw.krew.transfuzje && (
-            <Field>
-              <label>Reakcje potransfuzyjne</label>
-              <textarea rows={2} value={kw.krew.reakcje} onChange={(e) => kwUpdate('krew', 'reakcje', e.target.value)} style={{ padding: '8px 10px', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }} />
-            </Field>
+            <Row2>
+              <Field><label>Data transfuzji</label><input type="date" value={kw.krew.transfuzje_data} onChange={(e) => kwUpdate('krew', 'transfuzje_data', e.target.value)} /></Field>
+              <Field style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+                <ToggleCheckbox checked={kw.krew.transfuzje_reakcja} onChange={() => kwUpdate('krew', 'transfuzje_reakcja', !kw.krew.transfuzje_reakcja)} label="Była reakcja potransfuzyjna" />
+              </Field>
+            </Row2>
           )}
 
           <SectionTitle>Alergie</SectionTitle>
