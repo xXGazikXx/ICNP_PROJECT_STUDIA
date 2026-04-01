@@ -8,15 +8,8 @@ const ROLE_LABELS = {
   student: 'Student',
 };
 
-const JEDNOSTKI = [
-  'Chirurgia ogólna', 'Kardiologia', 'Neurologia', 'Ortopedia',
-  'Ginekologia', 'Pediatria', 'Interna', 'Onkologia',
-  'Urologia', 'Okulistyka', 'Dermatologia', 'Psychiatria',
-  'Geriatria', 'Rehabilitacja', 'Intensywna terapia (OIT)',
-];
-
 export default function Navbar() {
-  const { user, logout, jednostka, setJednostka } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,15 +31,6 @@ export default function Navbar() {
         )}
       </NavLeft>
       <NavRight>
-        <JednostkaSelect
-          value={jednostka}
-          onChange={(e) => setJednostka(e.target.value)}
-        >
-          <option value="">-- Jednostka --</option>
-          {JEDNOSTKI.map((j) => (
-            <option key={j} value={j}>{j}</option>
-          ))}
-        </JednostkaSelect>
         <UserInfo>
           {user?.imie} {user?.nazwisko}
           <RoleBadge>{ROLE_LABELS[user?.role]}</RoleBadge>
@@ -133,22 +117,4 @@ const LogoutBtn = styled.button`
   }
 `;
 
-const JednostkaSelect = styled.select`
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: all 0.2s;
 
-  option {
-    color: #333;
-    background: white;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-`;

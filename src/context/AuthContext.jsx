@@ -7,11 +7,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [jednostka, setJednostkaState] = useState('');
-
-  const setJednostka = (j) => {
-    setJednostkaState(j);
-  };
 
   const login = async (username, password) => {
     const res = await api.post('/auth/login', { username, password });
@@ -27,7 +22,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, jednostka, setJednostka }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -23,11 +23,14 @@ export default function PatientList({ patients, onStatusChange, onSelect, onEdit
   const filtered = patients.filter((p) => {
     if (!search) return true;
     const q = search.toLowerCase();
+    const autorName = p.autor ? `${p.autor.imie} ${p.autor.nazwisko}`.toLowerCase() : '';
     return (
       (p.imie || '').toLowerCase().includes(q) ||
       (p.nazwisko || '').toLowerCase().includes(q) ||
       (p.pesel || '').includes(q) ||
-      (p.numer_ksiegi_glownej || '').toLowerCase().includes(q)
+      (p.numer_ksiegi_glownej || '').toLowerCase().includes(q) ||
+      (p.jednostka || '').toLowerCase().includes(q) ||
+      autorName.includes(q)
     );
   });
 

@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 export default function DashboardPage() {
-  const { jednostka } = useAuth();
+  const { user } = useAuth();
   const notify = useNotification();
   const [patients, setPatients] = useState([]);
   const [activeTab, setActiveTab] = useState('aktualny');
@@ -31,9 +31,7 @@ export default function DashboardPage() {
 
   const fetchPatients = async () => {
     try {
-      const params = { status: activeTab };
-      if (jednostka) params.jednostka = jednostka;
-      const res = await api.get('/patients', { params });
+      const res = await api.get('/patients', { params: { status: activeTab } });
       setPatients(res.data);
     } catch (err) {
       console.error('Błąd ładowania pacjentów:', err);
@@ -45,7 +43,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setLoading(true);
     fetchPatients();
-  }, [activeTab, jednostka]);
+  }, [activeTab]);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -158,7 +156,6 @@ export default function DashboardPage() {
           <AddPatientModal
             onClose={() => setShowAdd(false)}
             onAdded={handlePatientAdded}
-            jednostka={jednostka}
           />
         )}
 
@@ -170,7 +167,6 @@ export default function DashboardPage() {
               fetchPatients();
             }}
             editData={editPatient}
-            jednostka={jednostka}
           />
         )}
 
